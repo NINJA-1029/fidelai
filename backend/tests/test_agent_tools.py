@@ -265,3 +265,37 @@ def test_zero_emojis_in_llm_provider_code():
         "[\U00010000-\U0010ffff\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f5ff\U0001f600-\U0001f64f\U0001f680-\U0001f6ff]"
     )
     assert not emoji_pattern.search(out)
+
+
+def test_agent_long_term_memory_persistence():
+    from backend.repositories.financial_repository import repo
+    user_id = "user_demo_01"
+    state = FinancialState(
+        user_id=user_id,
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+    )
+    agent = FinancialReasoningAgent(llm_provider=MockLLMProvider())
+
+    # Run agent twice with different queries
+    req1 = AgentRequest(user_id=user_id, user_query="Can I spend 5000 on shoes?")
+    resp1 = agent.run(req1, state)
+    assert resp1.user_id == user_id
+
+    req2 = AgentRequest(user_id=user_id, user_query="What about next week?")
+    resp2 = agent.run(req2, state)
+    assert resp2.user_id == user_id
+
+    # Verify memory history contains both runs in descending order
+    memories = repo.get_agent_memories(user_id, limit=5)
+    assert len(memories) >= 2
+    assert memories[0].response_id == resp2.response_id
+
