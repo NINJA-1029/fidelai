@@ -1,7 +1,10 @@
 import logging
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from shared.contracts.contracts import APIError
 from backend.api.routes import router
 
@@ -27,6 +30,33 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(f"Validation error on {request.url.path}: {exc.errors()}")
+    error_payload = APIError(
+        error_code="VALIDATION_ERROR",
+        message="Request payload validation failed.",
+        details={"errors": exc.errors()}
+    )
+    return JSONResponse(
+        status_code=422,
+        content=error_payload.model_dump(mode="json")
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    logger.warning(f"HTTP exception on {request.url.path} (status {exc.status_code}): {exc.detail}")
+    error_payload = APIError(
+        error_code=f"HTTP_{exc.status_code}",
+        message=str(exc.detail) if exc.detail else "An HTTP error occurred."
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_payload.model_dump(mode="json")
+    )
+
+
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.url.path}: {exc}", exc_info=True)
@@ -44,7 +74,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 app.include_router(router)
 
 
-@app.get("/")
+@app.get("/", tags=["System"])
 def root():
     return {
         "system": "Agentic AI Financial Management System",

@@ -26,7 +26,20 @@ class InMemoryFinancialRepository:
         self.preferences: Dict[str, UserPreferences] = {}
         self.events: Dict[str, List[FinancialEvent]] = {}
         self.balances: Dict[str, float] = {}
-        self._seed_demo_user("user_demo_01")
+        self.reset()
+
+    def reset(self, user_id: Optional[str] = None):
+        if user_id:
+            self._seed_demo_user(user_id)
+        else:
+            self.transactions.clear()
+            self.income_records.clear()
+            self.bills.clear()
+            self.goals.clear()
+            self.preferences.clear()
+            self.events.clear()
+            self.balances.clear()
+            self._seed_demo_user("user_demo_01")
 
     def _seed_demo_user(self, user_id: str):
         self.balances[user_id] = 42000.0  # Starting balance before unexpected expense
