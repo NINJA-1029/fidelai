@@ -78,23 +78,27 @@ There is an absolute prohibition on emojis and icons across this entire reposito
 
 There are four designated development roles. These codenames are strictly internal and must never be displayed in the user-facing UI.
 
-### Dev 1: High Warden (Flutter + UI)
-- Primary Ownership: frontend/
-- Responsibilities: Flutter application, Riverpod state management, GoRouter navigation, monochrome design system (0px container radius, 75px full pill buttons/badges), Lucide icons, dashboard, transactions screen, financial health screen, goals screen, investments screen, AI advisor screen, API client integration.
+### Dev 1: High Warden (@NINJA-1029) — Flutter Mobile Platform
+- Primary Ownership: `frontend/flutter_app/`
+- Assigned Issues: `#1 (HW-001)`, `#2 (HW-002)`, `#3 (HW-003)`, `#11 (HW-004)`, `#12 (HW-005)`, `#13 (HW-006)`, `#14 (HW-007)`
+- Responsibilities: Flutter application, Riverpod state management, Monopo Saigon design system (0px container radius, 75px full pill buttons/badges), Overview dashboard, transactions screen, goals pacing screen, simulation screen, AI advisor screen, API client integration.
 - Boundary: Must consume shared contracts. Must not implement financial math or duplicate backend engine logic.
 
-### Dev 2: The Scribe (AI / Agentic Workflow)
-- Primary Ownership: backend/agent/
+### Dev 2: The Scribe (@Indhracha-05) — AI / Agentic Workflow
+- Primary Ownership: `backend/agent/`
+- Assigned Issues: `#4 (SC-001)`, `#5 (SC-002)`, `#15 (SC-003)`
 - Responsibilities: LangGraph state machine, LLMProvider abstraction, llama.cpp GGUF client integration, deterministic tool execution, evidence compilation, recommendation synthesis, uncertainty reasoning, proactive risk analysis, structured AgentResponse validation.
 - Boundary: Must not perform financial arithmetic; must call deterministic tools.
 
-### Dev 3: The Alchemist (Financial Engine + Datasets)
-- Primary Ownership: backend/financial_engine/, backend/ingestion/, shared/fixtures/
-- Responsibilities: Ingestion normalizers (SMS, receipts, CSV, bank feeds), FinancialEvent generation, FinancialState calculator, cash-flow analysis, forecasting engine, risk/opportunity detection, goal progress math, uncertainty scoring, demo dataset scenarios.
+### Dev 3: The Alchemist (@babi-13) — Financial Engine + Datasets
+- Primary Ownership: `backend/financial_engine/`, `backend/ingestion/`, `shared/fixtures/`
+- Assigned Issues: `#6 (AL-001)`, `#7 (AL-002)`, `#8 (AL-003)`
+- Responsibilities: Ingestion normalizers (SMS regex, receipts, CSV, bank feeds), FinancialEvent generation, FinancialState calculator, cash-flow analysis, forecasting engine, risk/opportunity detection, goal progress math, uncertainty scoring, demo dataset scenarios.
 - Boundary: Owns the mathematical and statistical source of truth.
 
-### Dev 4: King's Hand (Backend + Cloud + Integration)
-- Primary Ownership: backend/api/, backend/models/, backend/repositories/, backend/services/, deployment/
+### Dev 4: King's Hand (@rakshithshakkthi) — Backend + Cloud + Integration
+- Primary Ownership: `backend/api/`, `backend/models/`, `backend/repositories/`, `backend/services/`, `deployment/`
+- Assigned Issues: `#9 (KH-001)`, `#10 (KH-002)`, `#16 (KH-003)`
 - Responsibilities: FastAPI application, Pydantic schemas, PostgreSQL/Supabase database models, repository layer, endpoint orchestration, end-to-end integration, native AWS EC2 deployment automation, CI/CD, final merge authority.
 - Boundary: Ensures architectural integrity and unblocks parallel tracks.
 
