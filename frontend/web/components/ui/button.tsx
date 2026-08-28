@@ -3,28 +3,40 @@ import { cn } from "./card";
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
+  variant?: "default" | "ghost-dark" | "ghost-light" | "slate-pill" | "outline" | "destructive";
   size?: "default" | "sm" | "lg" | "icon";
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", ...props }, ref) => {
     const baseStyles =
-      "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 rounded-full px-6 py-2.5";
-    
+      "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium tracking-tight rounded-full transition-all duration-smooth ease-patient disabled:pointer-events-none disabled:opacity-40 select-none";
+
     const variants = {
-      default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow",
-      outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-      secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      ghost: "hover:bg-accent hover:text-accent-foreground",
-      destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+      // Primary Ghost Pill on Light Surface
+      default:
+        "bg-transparent text-obsidian dark:text-paper border border-obsidian dark:border-paper hover:bg-obsidian hover:text-paper dark:hover:bg-paper dark:hover:text-obsidian",
+      // Ghost Pill on Dark / Iridescent Surface
+      "ghost-dark":
+        "bg-transparent text-paper border border-white/30 hover:border-white hover:bg-white/10 backdrop-blur-sm",
+      // Ghost Pill on Light Surface
+      "ghost-light":
+        "bg-transparent text-obsidian border border-obsidian hover:bg-obsidian/5",
+      // Filled Slate Pill
+      "slate-pill":
+        "bg-[#636363] text-paper border border-paper hover:bg-[#525252]",
+      outline:
+        "border border-border bg-transparent text-foreground hover:bg-muted",
+      destructive:
+        "border border-red-500 bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white",
     };
 
     const sizes = {
-      default: "h-10 px-6 py-2",
-      sm: "h-8 px-4 text-xs",
-      lg: "h-12 px-8 text-base",
-      icon: "h-9 w-9 p-0",
+      // Exact Monopo Saigon specification: 11px vertical, 33px horizontal padding
+      default: "py-[11px] px-[33px] text-[16px] leading-[1.15]",
+      sm: "py-[7px] px-[20px] text-[12px] leading-[1.19]",
+      lg: "py-[14px] px-[42px] text-[18px]",
+      icon: "h-10 w-10 p-0",
     };
 
     return (

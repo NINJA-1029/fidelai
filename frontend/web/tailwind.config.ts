@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      maxWidth: {
+        container: "1078px",
+      },
       borderRadius: {
         none: "0px",
         sm: "0px",
@@ -16,36 +19,48 @@ const config: Config = {
         lg: "0px",
         xl: "0px",
         "2xl": "0px",
-        "3xl": "0px",
-        full: "9999px",
+        full: "75.024px",
         pill: "75px",
       },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        obsidian: "#000000",
+        paper: "#ffffff",
+        inkstone: "#181818",
+        "felt-gray": "#6d6d6d",
+        "slate-pill": "#636363",
+        "ash-mist": "#9a9a9a",
+        pewter: "#808080",
+        border: "var(--border)",
+        input: "var(--input)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
         },
+      },
+      fontFamily: {
+        roobert: ["var(--font-roobert)", "Inter", "system-ui", "sans-serif"],
+        raleway: ["var(--font-raleway)", "Raleway", "sans-serif"],
+      },
+      transitionTimingFunction: {
+        patient: "cubic-bezier(0.19, 1, 0.22, 1)",
+      },
+      transitionDuration: {
+        patient: "1250ms",
+        smooth: "800ms",
       },
     },
   },
