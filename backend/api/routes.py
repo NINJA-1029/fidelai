@@ -21,6 +21,11 @@ def health_check():
     return {"status": "healthy", "service": "Agentic Financial Management Backend"}
 
 
+@router.get("/transactions", response_model=List[Transaction], tags=["Ingestion"])
+def get_transactions(user_id: str = Query("user_demo_01")):
+    return repo.get_transactions(user_id)
+
+
 @router.post("/transactions", response_model=Transaction, tags=["Ingestion"])
 def ingest_transaction(transaction: Transaction):
     try:
@@ -56,8 +61,25 @@ def analyze_finances(request: AgentRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/agent/query", response_model=AgentResponse, tags=["AI Advisor"])
+def query_agent(request: AgentRequest):
+    try:
+        state = orchestrator.get_current_financial_state(request.user_id)
+        return orchestrator.agent.run(request, state)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/simulation", response_model=SimulationResult, tags=["Simulations"])
 def run_simulation(request: SimulationRequest):
+    try:
+        return orchestrator.run_simulation(request)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/simulate", response_model=SimulationResult, tags=["Simulations"])
+def simulate_scenario(request: SimulationRequest):
     try:
         return orchestrator.run_simulation(request)
     except Exception as e:

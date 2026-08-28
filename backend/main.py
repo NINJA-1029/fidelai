@@ -73,12 +73,22 @@ async def generic_exception_handler(request: Request, exc: Exception):
 # Include API routes
 app.include_router(router)
 
+# Mount Flutter Web Application if compiled
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+flutter_web_dir = Path(__file__).resolve().parent.parent / "frontend" / "flutter_app" / "build" / "web"
+if flutter_web_dir.exists():
+    app.mount("/app", StaticFiles(directory=str(flutter_web_dir), html=True), name="flutter_app")
+
 
 @app.get("/", tags=["System"])
 def root():
     return {
         "system": "Agentic AI Financial Management System",
         "status": "operational",
+        "app_url": "/app",
         "docs_url": "/docs",
         "health_check": "/api/v1/health"
     }
