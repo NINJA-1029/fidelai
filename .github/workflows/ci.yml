@@ -2,9 +2,9 @@ name: Native Continuous Integration
 
 on:
   push:
-    branches: [ main, "feature/*", "fix/*" ]
+    branches: [ main, dev, "feature/*", "fix/*" ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   backend-tests:
@@ -27,23 +27,20 @@ jobs:
 
       - name: Run Backend and Contract Tests
         run: |
-          pytest backend/tests/ -v
+          PYTHONPATH=. pytest backend/tests/ -v
 
       - name: Verify Zero Emojis Across Repository
         run: |
           python -c "
           import os, sys
-          emoji_pattern = False
-          # Simple check for unicode emoji ranges in codebase
           for root, dirs, files in os.walk('.'):
-              if '.git' in root or '.venv' in root or '__pycache__' in root:
+              if any(skip in root for skip in ['.git', '.venv', '__pycache__', '.pytest_cache']):
                   continue
               for f in files:
                   if f.endswith(('.py', '.dart', '.md', '.json', '.yaml', '.yml')):
                       p = os.path.join(root, f)
                       with open(p, 'rb') as fh:
                           content = fh.read()
-                          # Common emoji high surrogate / utf-8 check
                           for b in content:
                               if 0x1F300 <= b <= 0x1F9FF or 0x2600 <= b <= 0x26FF:
                                   print(f'Emoji detected in {p}')
