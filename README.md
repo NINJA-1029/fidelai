@@ -4,7 +4,7 @@
 
 The Agentic AI Financial Management System continuously transforms fragmented, heterogeneous financial information into an evolving canonical model of a user's financial state.
 
-The system deterministically detects proactive risks and opportunities, simulates what-if scenarios, and provides explainable, evidence-backed decision support via a local LLM reasoning engine (Qwen 2.5 32B/27B GGUF running natively on llama.cpp).
+The system deterministically detects proactive risks and opportunities, simulates what-if scenarios, and provides explainable, evidence-backed decision support via a local LLM reasoning engine (Qwen 3.8 27B GGUF running natively on llama.cpp).
 
 ### The Golden Path
 ```
@@ -153,14 +153,15 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Swagger API Documentation: `http://localhost:8000/docs`
 
-### 3. Native llama.cpp LLM Server (Optional for Live Local Inference)
+### 3. Native llama.cpp LLM Server (Local Execution)
 ```bash
 # In separate directory:
 git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp && make -j
-./llama-server -m /path/to/qwen2.5-32b-instruct-q4_k_m.gguf --port 8080 -c 4096
+./llama-server -m /path/to/qwen-3.8-27b.gguf --port 8080 -c 4096
 ```
-*(By default, backend uses `MockLLMProvider` which requires zero GPU/model download).*
+*(Configure `LLM_PROVIDER=llamacpp` in `.env` to route live inferences to the local server).*
+
 
 ### 4. Frontend Setup
 ```bash

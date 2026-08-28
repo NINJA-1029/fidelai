@@ -1,14 +1,26 @@
+import os
 import json
 import re
+from typing import Optional
+from datetime import datetime, timezone
 import pytest
+
+
 from shared.contracts.contracts import (
     AgentRequest,
     AgentResponse,
     FinancialState,
+    FinancialGoal,
     UserPreferences,
     UncertaintyStatus,
 )
-from backend.agent.llm_provider import LLMProvider, LlamaCppProvider, MockLLMProvider
+
+from backend.agent.llm_provider import (
+    LLMProvider,
+    LlamaCppProvider,
+    MockLLMProvider,
+    get_llm_provider,
+)
 from backend.agent.tools import AgentTools
 from backend.agent.graph import FinancialReasoningAgent
 
@@ -39,10 +51,35 @@ def test_llamacpp_provider_initialization():
     provider.close()
 
 
+def test_get_llm_provider_factory(monkeypatch):
+    # 1. Explicit llamacpp
+    p1 = get_llm_provider("llamacpp")
+    assert isinstance(p1, LlamaCppProvider)
+    p1.close()
+
+    # 2. Explicit mock
+    p2 = get_llm_provider("mock")
+    assert isinstance(p2, MockLLMProvider)
+
+    # 3. Environment resolution
+    monkeypatch.setenv("LLM_PROVIDER", "llamacpp")
+    monkeypatch.setenv("LLAMA_CPP_ENDPOINT", "http://127.0.0.1:9999/completion")
+    p3 = get_llm_provider()
+    assert isinstance(p3, LlamaCppProvider)
+    assert p3.endpoint == "http://127.0.0.1:9999/completion"
+    p3.close()
+
+    # 4. Invalid provider must raise ValueError rather than silently falling back
+    monkeypatch.setenv("LLM_PROVIDER", "invalid_cloud_provider")
+    with pytest.raises(ValueError, match="Invalid or unsupported LLM_PROVIDER"):
+        get_llm_provider()
+
+
 def test_mock_llm_provider_default_generation():
     provider = MockLLMProvider()
     raw_output = provider.generate("Test prompt")
     assert isinstance(raw_output, str)
+
 
     parsed = json.loads(raw_output)
     assert "response_id" in parsed
@@ -221,6 +258,70 @@ def test_agent_deterministic_fallback_surplus():
     assert len(response.alternatives) >= 2
 
 
+def test_langgraph_compiled_structure():
+    agent = FinancialReasoningAgent(llm_provider=MockLLMProvider())
+    assert hasattr(agent, "graph")
+    assert agent.graph is not None
+
+    # Inspect graph node keys
+    nodes = agent.graph.nodes
+    expected_nodes = {
+        "__start__",
+        "gather_evidence",
+        "synthesize_prompt",
+        "llm_inference",
+        "validate_output",
+        "self_correct_retry",
+        "deterministic_fallback",
+    }
+    for expected in expected_nodes:
+        assert expected in nodes, f"Expected node '{expected}' missing from compiled StateGraph"
+
+
+def test_langgraph_retry_exhaustion_routes_to_fallback():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+    )
+
+    class AlwaysMalformedProvider(LLMProvider):
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+            self.calls += 1
+            return "MALFORMED_OUTPUT_NEVER_JSON"
+
+    provider = AlwaysMalformedProvider()
+    agent = FinancialReasoningAgent(llm_provider=provider)
+    req = AgentRequest(user_id="user_demo_01")
+    response = agent.run(req, state)
+
+    # Must make exactly 2 calls (initial + 1 bounded retry), then fallback
+    assert provider.calls == 2
+    assert isinstance(response, AgentResponse)
+    assert "resp_fallback_" in response.response_id
+    assert response.recommendation.title == "Preserve Near-Term Liquidity"
+
+
+def test_llamacpp_provider_respects_max_tokens_and_temp(monkeypatch):
+    monkeypatch.setenv("LLM_MAX_TOKENS", "2048")
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.25")
+    provider = LlamaCppProvider()
+    assert provider.max_tokens == 2048
+    assert provider.temperature == 0.25
+    provider.close()
+
+
 def test_zero_emojis_in_reasoning_and_fallback():
     state = FinancialState(
         user_id="user_demo_01",
@@ -298,4 +399,150 @@ def test_agent_long_term_memory_persistence():
     memories = repo.get_agent_memories(user_id, limit=5)
     assert len(memories) >= 2
     assert memories[0].response_id == resp2.response_id
+
+
+def test_agent_tools_gather_tradeoff_context():
+    target_dt = datetime.now(timezone.utc)
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+        investments_total_value=150000.0,
+        savings=10000.0,
+        financial_goals=[
+            FinancialGoal(
+                goal_id="goal_1",
+                user_id="user_demo_01",
+                title="Emergency Buffer Extension",
+                target_amount=100000.0,
+                current_amount=40000.0,
+                monthly_contribution_required=5000.0,
+                priority=1,
+                target_date=target_dt,
+            ),
+            FinancialGoal(
+                goal_id="goal_2",
+                user_id="user_demo_01",
+                title="Europe Vacation",
+                target_amount=150000.0,
+                current_amount=30000.0,
+                monthly_contribution_required=8000.0,
+                priority=3,
+                target_date=target_dt,
+            ),
+        ],
+    )
+
+    ctx = AgentTools.gather_tradeoff_context(state)
+    assert ctx["is_deficit"] is True
+    assert ctx["shortfall_amount"] == 5600.0  # 25000 - 19400
+    assert ctx["total_monthly_goal_allocation"] == 13000.0
+    assert len(ctx["goals_ranked"]) == 2
+    assert ctx["goals_ranked"][0]["priority"] == 1
+    assert ctx["goals_ranked"][1]["priority"] == 3
+    assert ctx["discretionary_expenses"] == 8500.0
+    assert ctx["investments_total_value"] == 150000.0
+
+
+def test_multi_objective_tradeoff_reasoning_in_prompt():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+        investments_total_value=250000.0,
+        financial_goals=[
+            FinancialGoal(
+                goal_id="goal_1",
+                user_id="user_demo_01",
+                title="Home Down Payment",
+                target_amount=500000.0,
+                current_amount=120000.0,
+                monthly_contribution_required=15000.0,
+                priority=1,
+                target_date=datetime.now(timezone.utc),
+            )
+        ],
+    )
+
+    agent = FinancialReasoningAgent(llm_provider=MockLLMProvider())
+    evidence = AgentTools.gather_evidence_for_liquidity(state)
+    prompt = agent._build_prompt(state, evidence, query="Should I pause my goal?")
+
+    assert "COMPETING FINANCIAL OBJECTIVES:" in prompt
+    assert "Liquidity Buffer Preservation" in prompt
+    assert "Goal Pacing Allocation" in prompt
+    assert "Long-Term Investment Compounding" in prompt
+    assert "Lifestyle Discretionary Trimming" in prompt
+    assert "Home Down Payment" in prompt
+
+
+def test_multi_objective_tradeoffs_in_deterministic_fallback():
+    target_dt = datetime.now(timezone.utc)
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+        investments_total_value=120000.0,
+        financial_goals=[
+            FinancialGoal(
+                goal_id="g1",
+                user_id="user_demo_01",
+                title="Retirement Corpus",
+                target_amount=1000000.0,
+                current_amount=200000.0,
+                monthly_contribution_required=10000.0,
+                priority=1,
+                target_date=target_dt,
+            ),
+            FinancialGoal(
+                goal_id="g2",
+                user_id="user_demo_01",
+                title="International Trip",
+                target_amount=120000.0,
+                current_amount=20000.0,
+                monthly_contribution_required=6000.0,
+                priority=3,
+                target_date=target_dt,
+            ),
+        ],
+    )
+
+    agent = FinancialReasoningAgent(llm_provider=MockLLMProvider(should_fail=True))
+    req = AgentRequest(user_id="user_demo_01")
+    response = agent.run(req, state)
+
+    # 1. Verify at least 2 distinct alternatives
+    assert len(response.alternatives) >= 2
+    # Check that the lower priority goal is referenced in the alternatives
+    assert any("International Trip" in alt for alt in response.alternatives)
+
+    # 2. Verify competing objectives contains multi-objective trade-offs
+    assert len(response.competing_objectives_considered) >= 2
+    tradeoffs_joined = " ".join(response.competing_objectives_considered)
+    assert "Liquidity" in tradeoffs_joined
+    assert "Investment" in tradeoffs_joined or "INR 120,000" in tradeoffs_joined
 

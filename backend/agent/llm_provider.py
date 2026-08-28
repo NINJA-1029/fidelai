@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import httpx
@@ -23,17 +24,21 @@ class LLMProvider(ABC):
 
 class LlamaCppProvider(LLMProvider):
     """
-    Native llama.cpp HTTP server provider for local GGUF execution.
+    Native llama.cpp HTTP server provider for local Qwen 3.8 27B GGUF execution.
     Communicates natively with the completion endpoint using Qwen ChatML tokens.
     """
 
     def __init__(
         self,
-        endpoint: str = "http://localhost:8080/completion",
+        endpoint: Optional[str] = None,
         timeout_seconds: float = 30.0,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
     ):
-        self.endpoint = endpoint
+        self.endpoint = endpoint or os.getenv("LLAMA_CPP_ENDPOINT", "http://localhost:8080/completion")
         self.timeout_seconds = timeout_seconds
+        self.max_tokens = max_tokens if max_tokens is not None else int(os.getenv("LLM_MAX_TOKENS", "1024"))
+        self.temperature = temperature if temperature is not None else float(os.getenv("LLM_TEMPERATURE", "0.1"))
         self._client: Optional[httpx.Client] = None
 
     def _get_client(self) -> httpx.Client:
@@ -60,8 +65,8 @@ class LlamaCppProvider(LLMProvider):
         full_prompt = self.format_chatml_prompt(prompt=prompt, system_prompt=system_prompt)
         payload = {
             "prompt": full_prompt,
-            "temperature": 0.1,
-            "n_predict": 1024,
+            "temperature": self.temperature,
+            "n_predict": self.max_tokens,
             "stop": ["<|im_end|>", "<|endoftext|>"],
         }
 
@@ -81,6 +86,7 @@ class LlamaCppProvider(LLMProvider):
     def close(self) -> None:
         if self._client is not None and not self._client.is_closed:
             self._client.close()
+
 
 
 class MockLLMProvider(LLMProvider):
@@ -158,4 +164,24 @@ class MockLLMProvider(LLMProvider):
             ],
         }
         return json.dumps(default_payload)
+
+
+def get_llm_provider(provider_type: Optional[str] = None) -> LLMProvider:
+    """
+    Factory resolving the LLMProvider from environment or explicit argument.
+    Production runtime defaults to 'llamacpp' unless explicitly configured.
+    Raises ValueError on missing/invalid provider to prevent silent mock usage.
+    """
+    provider_name = (provider_type or os.getenv("LLM_PROVIDER", "llamacpp")).strip().lower()
+
+    if provider_name == "llamacpp":
+        endpoint = os.getenv("LLAMA_CPP_ENDPOINT", "http://localhost:8080/completion")
+        return LlamaCppProvider(endpoint=endpoint)
+    elif provider_name == "mock":
+        return MockLLMProvider()
+    else:
+        raise ValueError(
+            f"Invalid or unsupported LLM_PROVIDER '{provider_name}'. "
+            f"Supported options are: 'llamacpp', 'mock'."
+        )
 

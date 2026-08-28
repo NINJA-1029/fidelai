@@ -2,7 +2,8 @@
 
 ## 1. Agent Mission and Design Philosophy
 
-The Agentic Reasoning Layer (`backend/agent/`) acts as the cognitive synthesis engine of the system. It receives financial triggers and user queries, invokes deterministic tools to retrieve verified financial facts and evidence, and prompts a local Qwen GGUF model via native `llama.cpp` to formulate explainable, contextual recommendations.
+The Agentic Reasoning Layer (`backend/agent/`) acts as the cognitive synthesis engine of the system. It receives financial triggers and user queries, invokes deterministic tools to retrieve verified financial facts and evidence, and prompts a local Qwen 3.8 27B GGUF model via native `llama.cpp` to formulate explainable, contextual recommendations.
+
 
 ### Core Tenet
 The LLM never computes financial arithmetic. The LLM evaluates trade-offs, synthesizes evidence, explains complex financial dynamics in accessible prose, and ranks alternative options based on user preferences.

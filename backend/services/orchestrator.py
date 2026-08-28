@@ -16,7 +16,6 @@ from backend.financial_engine.state_calculator import FinancialStateCalculator
 from backend.financial_engine.forecasting import BalanceForecaster
 from backend.financial_engine.risk_detector import RiskDetector, OpportunityDetector
 from backend.agent.graph import FinancialReasoningAgent
-from backend.agent.llm_provider import MockLLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,8 @@ class FinancialOrchestrator:
     """
 
     def __init__(self, agent: Optional[FinancialReasoningAgent] = None):
-        self.agent = agent or FinancialReasoningAgent(llm_provider=MockLLMProvider())
+        self.agent = agent or FinancialReasoningAgent()
+
 
     def get_current_financial_state(self, user_id: str) -> FinancialState:
         balance = repo.get_balance(user_id)

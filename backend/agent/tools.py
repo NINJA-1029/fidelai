@@ -89,3 +89,38 @@ class AgentTools:
             "opportunities": [o.model_dump() for o in opportunities],
         }
 
+    @staticmethod
+    def gather_tradeoff_context(state: FinancialState) -> Dict[str, Any]:
+        """
+        Extracts structured mathematical trade-off dimensions across:
+        1. Liquidity preservation vs. safety buffer floor
+        2. Goal contributions by priority ranking
+        3. Investment portfolio compounding vs. liquidation
+        4. Discretionary spending reduction capacity
+        """
+        shortfall = max(0.0, round(state.minimum_cash_buffer - state.projected_balance, 2))
+        surplus = max(0.0, round(state.projected_balance - state.minimum_cash_buffer, 2))
+
+        goals_sorted = sorted(state.financial_goals, key=lambda g: g.priority)
+        total_monthly_goal_req = sum(g.monthly_contribution_required for g in state.financial_goals)
+
+        return {
+            "is_deficit": shortfall > 0.0,
+            "shortfall_amount": shortfall,
+            "surplus_amount": surplus,
+            "total_monthly_goal_allocation": round(total_monthly_goal_req, 2),
+            "goals_ranked": [
+                {
+                    "goal_id": g.goal_id,
+                    "title": g.title,
+                    "priority": g.priority,
+                    "monthly_req": round(g.monthly_contribution_required, 2),
+                    "current_amount": round(g.current_amount, 2),
+                    "target_amount": round(g.target_amount, 2),
+                }
+                for g in goals_sorted
+            ],
+            "discretionary_expenses": round(state.discretionary_expenses, 2),
+            "investments_total_value": round(state.investments_total_value, 2),
+            "savings": round(state.savings, 2),
+        }

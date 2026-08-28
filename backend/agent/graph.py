@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field, ValidationError
+from langgraph.graph import StateGraph, START, END
 
 from shared.contracts.contracts import (
     AgentRequest,
@@ -11,7 +12,7 @@ from shared.contracts.contracts import (
     Recommendation,
     Evidence,
 )
-from backend.agent.llm_provider import LLMProvider, MockLLMProvider
+from backend.agent.llm_provider import LLMProvider, MockLLMProvider, get_llm_provider
 from backend.agent.tools import AgentTools
 from backend.repositories.financial_repository import repo
 
@@ -19,45 +20,97 @@ logger = logging.getLogger(__name__)
 
 
 class AgentWorkflowState(BaseModel):
+    """
+    Canonical LangGraph workflow state tracking execution across all nodes.
+    """
     user_id: str
     trigger_event: Optional[Dict[str, Any]] = None
     user_query: Optional[str] = None
     financial_state: Optional[FinancialState] = None
     evidence: List[Evidence] = Field(default_factory=list)
     past_memories: List[AgentResponse] = Field(default_factory=list)
+    system_prompt: Optional[str] = None
+    user_prompt: Optional[str] = None
     raw_llm_output: Optional[str] = None
+    validation_error: Optional[str] = None
+    is_valid: bool = False
     retry_attempted: bool = False
     final_response: Optional[AgentResponse] = None
 
 
 class FinancialReasoningAgent:
     """
-    Orchestrates the multi-stage financial reasoning workflow with Long-Term Memory:
-    1. Retrieve Past Decision Memories
-    2. Tool Execution & Fact Gathering
-    3. Structured LLM Synthesis
-    4. Schema Validation & Self-Correction Retry
-    5. Deterministic Fallback Generation & Memory Persistence
+    Compiled LangGraph StateGraph reasoning workflow with Long-Term Memory:
+    1. gather_evidence (Deterministic fact gathering & historical memory retrieval)
+    2. synthesize_prompt (Multi-objective ChatML prompt generation)
+    3. llm_inference (Local Qwen 3.8 27B GGUF via llama.cpp)
+    4. validate_output (Schema parsing and Pydantic validation)
+    5. self_correct_retry (Bounded corrective retry loop)
+    6. deterministic_fallback (Rule-based fallback without LLM dependency)
     """
 
     def __init__(self, llm_provider: Optional[LLMProvider] = None):
-        self.llm_provider = llm_provider or MockLLMProvider()
+        self.llm_provider = llm_provider or get_llm_provider()
+        self.graph = self._build_graph()
 
-    def run(self, request: AgentRequest, state: FinancialState) -> AgentResponse:
-        workflow_state = AgentWorkflowState(
-            user_id=request.user_id,
-            trigger_event=request.trigger_event.model_dump() if request.trigger_event else None,
-            user_query=request.user_query,
-            financial_state=state,
+    def _build_graph(self):
+        workflow = StateGraph(AgentWorkflowState)
+
+        # Register Graph Nodes
+        workflow.add_node("gather_evidence", self._node_gather_evidence)
+        workflow.add_node("synthesize_prompt", self._node_synthesize_prompt)
+        workflow.add_node("llm_inference", self._node_llm_inference)
+        workflow.add_node("validate_output", self._node_validate_output)
+        workflow.add_node("self_correct_retry", self._node_self_correct_retry)
+        workflow.add_node("deterministic_fallback", self._node_deterministic_fallback)
+
+        # Standard Sequential Edges
+        workflow.add_edge(START, "gather_evidence")
+        workflow.add_edge("gather_evidence", "synthesize_prompt")
+        workflow.add_edge("synthesize_prompt", "llm_inference")
+        workflow.add_edge("llm_inference", "validate_output")
+
+        # Conditional Routing Edge after Output Validation
+        workflow.add_conditional_edges(
+            "validate_output",
+            self._route_after_validation,
+            {
+                "end": END,
+                "self_correct_retry": "self_correct_retry",
+                "deterministic_fallback": "deterministic_fallback",
+            },
         )
 
-        # Stage 1: Gather deterministic facts, evidence, and long-term memory
-        evidence = AgentTools.gather_evidence_for_liquidity(state)
-        workflow_state.evidence = evidence
-        past_memories = repo.get_agent_memories(request.user_id, limit=3)
-        workflow_state.past_memories = past_memories
+        # Edge from Self-Correction Retry back to Validation
+        workflow.add_edge("self_correct_retry", "validate_output")
 
-        # Stage 2: Build prompts
+        # Edge from Fallback to Graph Completion
+        workflow.add_edge("deterministic_fallback", END)
+
+        return workflow.compile()
+
+    # -------------------------------------------------------------
+    # Graph Nodes Implementation
+    # -------------------------------------------------------------
+
+    def _node_gather_evidence(self, state: AgentWorkflowState) -> Dict[str, Any]:
+        if state.financial_state:
+            evidence = AgentTools.gather_evidence_for_liquidity(state.financial_state)
+        else:
+            evidence = []
+
+        try:
+            past_memories = repo.get_agent_memories(state.user_id, limit=3)
+        except Exception as e:
+            logger.warning(f"Failed to fetch past memories for user {state.user_id}: {e}")
+            past_memories = []
+
+        return {
+            "evidence": evidence,
+            "past_memories": past_memories,
+        }
+
+    def _node_synthesize_prompt(self, state: AgentWorkflowState) -> Dict[str, Any]:
         system_prompt = (
             "You are a fiduciary AI financial strategist and decision advisor. "
             "Reason strictly over the provided factual evidence, past advice history, and deterministic calculations. "
@@ -68,39 +121,162 @@ class FinancialReasoningAgent:
             "Output valid JSON conforming exactly to the AgentResponse schema."
         )
 
-        user_prompt = self._build_prompt(state, evidence, request.user_query, past_memories)
+        if state.financial_state:
+            user_prompt = self._build_prompt(
+                state.financial_state,
+                state.evidence,
+                state.user_query,
+                state.past_memories,
+            )
+        else:
+            user_prompt = "No financial state provided. Return standard safety recommendation."
 
-        # Stage 3: LLM Inference with Self-Correction
+        return {
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+        }
+
+    def _node_llm_inference(self, state: AgentWorkflowState) -> Dict[str, Any]:
         try:
-            raw_output = self.llm_provider.generate(prompt=user_prompt, system_prompt=system_prompt)
-            workflow_state.raw_llm_output = raw_output
-            response = self._parse_and_validate(raw_output, request.user_id, evidence)
-            workflow_state.final_response = response
-            repo.save_agent_memory(request.user_id, response, request.user_query)
-            return response
-
-        except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as parse_err:
-            logger.warning(f"Initial LLM response failed validation: {parse_err}. Attempting self-correction retry.")
-            workflow_state.retry_attempted = True
-
-            try:
-                retry_prompt = self._build_retry_prompt(user_prompt, workflow_state.raw_llm_output or "", str(parse_err))
-                corrected_output = self.llm_provider.generate(prompt=retry_prompt, system_prompt=system_prompt)
-                response = self._parse_and_validate(corrected_output, request.user_id, evidence)
-                workflow_state.final_response = response
-                repo.save_agent_memory(request.user_id, response, request.user_query)
-                return response
-            except Exception as retry_err:
-                logger.warning(f"Self-correction failed: {retry_err}. Falling back to deterministic synthesizer.")
-                fallback_resp = self._deterministic_fallback(request.user_id, state, evidence)
-                repo.save_agent_memory(request.user_id, fallback_resp, request.user_query)
-                return fallback_resp
-
+            raw_output = self.llm_provider.generate(
+                prompt=state.user_prompt or "",
+                system_prompt=state.system_prompt,
+            )
+            return {
+                "raw_llm_output": raw_output,
+                "validation_error": None,
+            }
         except Exception as e:
-            logger.warning(f"LLM execution error: {e}. Executing deterministic fallback recommendation.")
-            fallback_resp = self._deterministic_fallback(request.user_id, state, evidence)
-            repo.save_agent_memory(request.user_id, fallback_resp, request.user_query)
-            return fallback_resp
+            logger.warning(f"LLM inference failure: {e}. Routing to fallback.")
+            return {
+                "raw_llm_output": None,
+                "validation_error": str(e),
+                "is_valid": False,
+            }
+
+    def _node_validate_output(self, state: AgentWorkflowState) -> Dict[str, Any]:
+        if not state.raw_llm_output:
+            return {
+                "is_valid": False,
+                "validation_error": state.validation_error or "Empty LLM response",
+            }
+
+        try:
+            response = self._parse_and_validate(state.raw_llm_output, state.user_id, state.evidence)
+            return {
+                "final_response": response,
+                "is_valid": True,
+                "validation_error": None,
+            }
+        except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as parse_err:
+            logger.warning(f"Output validation failed: {parse_err}")
+            return {
+                "is_valid": False,
+                "validation_error": str(parse_err),
+            }
+
+    def _node_self_correct_retry(self, state: AgentWorkflowState) -> Dict[str, Any]:
+        retry_prompt = self._build_retry_prompt(
+            original_prompt=state.user_prompt or "",
+            bad_output=state.raw_llm_output or "",
+            error_msg=state.validation_error or "Invalid JSON formatting",
+        )
+
+        try:
+            corrected_output = self.llm_provider.generate(
+                prompt=retry_prompt,
+                system_prompt=state.system_prompt,
+            )
+            return {
+                "raw_llm_output": corrected_output,
+                "retry_attempted": True,
+                "validation_error": None,
+            }
+        except Exception as e:
+            logger.warning(f"Self-correction LLM call failed: {e}")
+            return {
+                "raw_llm_output": None,
+                "retry_attempted": True,
+                "validation_error": str(e),
+            }
+
+    def _node_deterministic_fallback(self, state: AgentWorkflowState) -> Dict[str, Any]:
+        if state.financial_state:
+            fallback_resp = self._deterministic_fallback(
+                user_id=state.user_id,
+                state=state.financial_state,
+                evidence=state.evidence,
+            )
+        else:
+            fallback_resp = AgentResponse(
+                response_id=f"resp_fallback_{int(datetime.now(timezone.utc).timestamp())}",
+                user_id=state.user_id,
+                recommendation=Recommendation(
+                    recommendation_id=f"rec_fallback_{int(datetime.now(timezone.utc).timestamp())}",
+                    title="Preserve Capital",
+                    priority="high",
+                    description="Maintain current liquid buffer.",
+                    category="liquidity",
+                ),
+                reason="Default safety fallback.",
+                evidence=state.evidence,
+                confidence=0.90,
+                alternatives=["Maintain cash reserves."],
+                competing_objectives_considered=["Liquidity preservation."],
+                generated_at=datetime.now(timezone.utc),
+            )
+
+        return {
+            "final_response": fallback_resp,
+            "is_valid": True,
+        }
+
+    # -------------------------------------------------------------
+    # Conditional Routing Logic
+    # -------------------------------------------------------------
+
+    def _route_after_validation(self, state: AgentWorkflowState) -> str:
+        if state.is_valid and state.final_response is not None:
+            return "end"
+        if not state.retry_attempted and state.raw_llm_output is not None:
+            return "self_correct_retry"
+        return "deterministic_fallback"
+
+    # -------------------------------------------------------------
+    # Execution Interface
+    # -------------------------------------------------------------
+
+    def run(self, request: AgentRequest, state: FinancialState) -> AgentResponse:
+        initial_state = AgentWorkflowState(
+            user_id=request.user_id,
+            trigger_event=request.trigger_event.model_dump() if request.trigger_event else None,
+            user_query=request.user_query,
+            financial_state=state,
+        )
+
+        result = self.graph.invoke(initial_state)
+
+        if isinstance(result, dict):
+            final_response = result.get("final_response")
+        elif hasattr(result, "final_response"):
+            final_response = result.final_response
+        else:
+            final_response = None
+
+        if final_response is None:
+            evidence = AgentTools.gather_evidence_for_liquidity(state)
+            final_response = self._deterministic_fallback(request.user_id, state, evidence)
+
+        try:
+            repo.save_agent_memory(request.user_id, final_response, request.user_query)
+        except Exception as e:
+            logger.warning(f"Failed to persist agent memory for user {request.user_id}: {e}")
+
+        return final_response
+
+    # -------------------------------------------------------------
+    # Helper Methods
+    # -------------------------------------------------------------
 
     def _build_prompt(
         self,
@@ -115,11 +291,17 @@ class FinancialReasoningAgent:
         ]
         evidence_str = "\n".join(evidence_lines)
 
-        goals_str = (
-            ", ".join([f"{g.title} (target: INR {g.target_amount:,.0f}, priority: {g.priority})" for g in state.financial_goals])
-            if state.financial_goals
-            else "No explicit goals configured"
-        )
+        tradeoff_ctx = AgentTools.gather_tradeoff_context(state)
+        goals_lines = [
+            f"  * [Priority {g['priority']}] {g['title']} (Monthly: INR {g['monthly_req']:,.2f}, Target: INR {g['target_amount']:,.2f}, Saved: INR {g['current_amount']:,.2f})"
+            for g in tradeoff_ctx["goals_ranked"]
+        ]
+        goals_block = "\n".join(goals_lines) if goals_lines else "  * No active goals configured"
+
+        if tradeoff_ctx["is_deficit"]:
+            buffer_status = f"DEFICIT of INR {tradeoff_ctx['shortfall_amount']:,.2f}"
+        else:
+            buffer_status = f"SURPLUS of INR {tradeoff_ctx['surplus_amount']:,.2f}"
 
         memory_section = ""
         if past_memories:
@@ -137,13 +319,20 @@ class FinancialReasoningAgent:
             f"- 30-Day Projected Balance: INR {state.projected_balance:,.2f}\n"
             f"- Minimum Preferred Cash Buffer: INR {state.minimum_cash_buffer:,.2f}\n"
             f"- Upcoming Obligations (Next 30 Days): INR {state.upcoming_obligations:,.2f}\n"
-            f"- Active Goals: {goals_str}\n"
             f"- Investment Portfolio Value: INR {state.investments_total_value:,.2f}\n"
+            f"- Discretionary Spending: INR {state.discretionary_expenses:,.2f}\n"
             f"{memory_section}\n"
+            f"COMPETING FINANCIAL OBJECTIVES:\n"
+            f"1. Liquidity Buffer Preservation: Minimum Target = INR {state.minimum_cash_buffer:,.2f} ({buffer_status})\n"
+            f"2. Goal Pacing Allocation: Total Monthly Commitment = INR {tradeoff_ctx['total_monthly_goal_allocation']:,.2f}\n"
+            f"   Active Goals by Priority:\n{goals_block}\n"
+            f"3. Long-Term Investment Compounding: Portfolio Value = INR {state.investments_total_value:,.2f}\n"
+            f"   (Preserve compounding equity investments; avoid premature liquidation for short-term gaps)\n"
+            f"4. Lifestyle Discretionary Trimming: Monthly Discretionary Expenses = INR {state.discretionary_expenses:,.2f}\n\n"
             f"DETERMINISTIC EVIDENCE METRICS:\n"
             f"{evidence_str}\n\n"
             f"USER QUERY:\n"
-            f"{query or 'Analyze recent financial movements, evaluate liquidity risks, and recommend corrective actions.'}\n\n"
+            f"{query or 'Analyze recent financial movements, evaluate liquidity risks vs competing goals, and recommend optimal trade-offs.'}\n\n"
             f"OUTPUT FORMAT REQUIREMENT:\n"
             f"Respond with a single raw JSON object matching this structure:\n"
             f"{{\n"
@@ -157,10 +346,16 @@ class FinancialReasoningAgent:
             f'    "impact_amount": <float or null>,\n'
             f'    "category": "liquidity|savings|investment|debt|budgeting"\n'
             f"  }},\n"
-            f'  "reason": "<Evidence-backed explanation>",\n'
+            f'  "reason": "<Evidence-backed explanation articulating the core trade-off rationale>",\n'
             f'  "confidence": <float between 0.8 and 1.0>,\n'
-            f'  "alternatives": ["<Actionable alternative 1>", "<Actionable alternative 2>"],\n'
-            f'  "competing_objectives_considered": ["<Tradeoff 1>", "<Tradeoff 2>"]\n'
+            f'  "alternatives": [\n'
+            f'    "<Actionable alternative 1 with specific trade-off or amount>",\n'
+            f'    "<Actionable alternative 2 with specific trade-off or amount>"\n'
+            f"  ],\n"
+            f'  "competing_objectives_considered": [\n'
+            f'    "<Explicit trade-off 1, e.g. Liquidity buffer defense vs pausing secondary goal>",\n'
+            f'    "<Explicit trade-off 2, e.g. Protecting compounding investments vs trimming discretionary spending>"\n'
+            f"  ]\n"
             f"}}"
         )
 
@@ -170,7 +365,7 @@ class FinancialReasoningAgent:
             f"PREVIOUS ATTEMPT FAILED WITH ERROR:\n{error_msg}\n\n"
             f"PREVIOUS ATTEMPT OUTPUT:\n{bad_output}\n\n"
             f"CORRECTION INSTRUCTION:\n"
-            f"Please output ONLY valid JSON that strictly adheres to the requested schema. Do not enclose in markdown blocks."
+            f"Please output ONLY valid JSON that strictly adheres to the requested schema. Ensure at least two distinct alternatives and explicit competing objectives. Do not enclose in markdown blocks."
         )
 
     def _parse_and_validate(
@@ -201,23 +396,27 @@ class FinancialReasoningAgent:
         )
 
         alternatives = parsed_json.get("alternatives", [])
+        if not isinstance(alternatives, list):
+            alternatives = []
         if len(alternatives) < 2:
             alternatives.extend([
-                "Temporarily defer non-essential discretionary entertainment spending.",
-                "Review and pause non-critical savings goals for the upcoming cycle."
+                "Temporarily pause lower-priority goal contributions for the upcoming billing cycle.",
+                "Reduce monthly discretionary lifestyle allocations by 25% to restore liquidity buffer.",
             ])
             alternatives = alternatives[:3]
 
-        competing = parsed_json.get(
-            "competing_objectives_considered",
-            ["Liquidity buffer preservation vs. non-essential goal funding."]
-        )
+        competing = parsed_json.get("competing_objectives_considered", [])
+        if not isinstance(competing, list) or len(competing) < 1:
+            competing = [
+                "Liquidity buffer preservation vs. non-essential goal funding pacing.",
+                "Protecting compounding investment portfolio vs. cash flow deficit resolution.",
+            ]
 
         return AgentResponse(
             response_id=parsed_json.get("response_id", f"resp_{int(datetime.now(timezone.utc).timestamp())}"),
             user_id=user_id,
             recommendation=recommendation,
-            reason=parsed_json.get("reason", "Deterministic synthesis of liquid reserves and obligations."),
+            reason=parsed_json.get("reason", "Deterministic synthesis of liquid reserves, goals, and obligations."),
             evidence=evidence,
             confidence=max(0.0, min(1.0, float(parsed_json.get("confidence", 0.94)))),
             alternatives=alternatives,
@@ -231,8 +430,11 @@ class FinancialReasoningAgent:
         state: FinancialState,
         evidence: List[Evidence],
     ) -> AgentResponse:
-        is_deficit = state.projected_balance < state.minimum_cash_buffer
-        deficit = max(0.0, round(state.minimum_cash_buffer - state.projected_balance, 2))
+        tradeoff_ctx = AgentTools.gather_tradeoff_context(state)
+        is_deficit = tradeoff_ctx["is_deficit"]
+        deficit = tradeoff_ctx["shortfall_amount"]
+        surplus = tradeoff_ctx["surplus_amount"]
+        goals = tradeoff_ctx["goals_ranked"]
         now_ts = int(datetime.now(timezone.utc).timestamp())
 
         if is_deficit:
@@ -242,25 +444,39 @@ class FinancialReasoningAgent:
                 f"Your 30-day projected balance of INR {state.projected_balance:,.2f} dips below your "
                 f"INR {state.minimum_cash_buffer:,.2f} reserve buffer by INR {deficit:,.2f}. "
                 f"With scheduled upcoming obligations of INR {state.upcoming_obligations:,.2f}, we recommend "
-                f"pausing non-essential goal contributions and trimming discretionary spending."
+                f"temporarily adjusting lower-priority allocations to defend your cash floor."
             )
             reason = (
                 f"Projected month-end cash balance violates the preferred minimum safety buffer by INR {deficit:,.2f}, "
                 f"creating potential liquidity exposure before the next income cycle."
             )
+
+            # Formulate goal-specific alternative if active goals exist
+            if goals:
+                lowest_goal = goals[-1]
+                highest_goal = goals[0]
+                alt_goal = (
+                    f"Temporarily pause monthly contribution of INR {lowest_goal['monthly_req']:,.2f} to "
+                    f"'{lowest_goal['title']}' (Priority {lowest_goal['priority']}) while maintaining "
+                    f"'{highest_goal['title']}' (Priority {highest_goal['priority']})."
+                )
+            else:
+                alt_goal = "Defer non-essential savings allocations until liquid reserves recover."
+
             alternatives = [
-                "Temporarily pause secondary goal contributions (e.g. vacation fund) for this billing cycle.",
-                "Reduce remaining discretionary dining and entertainment allocations by INR 4,000.",
-                "Utilize short-term liquid savings to protect primary checking buffer without touching long-term investments.",
+                alt_goal,
+                f"Trim discretionary lifestyle and entertainment spending by up to INR {min(4000.0, state.discretionary_expenses):,.2f}.",
+                "Utilize short-term liquid savings to protect checking buffer rather than liquidating compounding investments.",
             ]
+
             competing = [
-                "Liquidity preservation (Priority 1) vs. Secondary Goal pacing (Priority 3).",
-                "Retaining long-term investments rather than liquidating equity for temporary shortfall."
+                "Liquidity Buffer Defense (Priority 1) vs. Secondary Goal Funding (Priority 3).",
+                f"Preserving Long-Term Investments (INR {state.investments_total_value:,.2f}) vs. Selling Assets for Temporary Shortfall.",
+                "Discretionary Lifestyle Freedom vs. Strict Reserve Protection.",
             ]
         else:
             rec_title = "Deploy Surplus Liquidity"
             rec_priority = "medium"
-            surplus = round(state.projected_balance - state.minimum_cash_buffer, 2)
             rec_desc = (
                 f"Your projected month-end balance of INR {state.projected_balance:,.2f} maintains a healthy "
                 f"surplus of INR {surplus:,.2f} above your INR {state.minimum_cash_buffer:,.2f} buffer. "
@@ -270,13 +486,25 @@ class FinancialReasoningAgent:
                 f"Deterministic projections confirm full coverage of upcoming obligations with an available "
                 f"liquidity buffer of INR {surplus:,.2f}."
             )
+
+            if goals:
+                primary_goal = goals[0]
+                alt_primary = (
+                    f"Accelerate '{primary_goal['title']}' (Priority {primary_goal['priority']}) with an extra "
+                    f"lump-sum allocation of INR {min(surplus, 10000.0):,.2f}."
+                )
+            else:
+                alt_primary = "Direct surplus liquidity into high-yield liquid instruments or index funds."
+
             alternatives = [
-                "Accelerate primary goal funding with an additional lump-sum allocation.",
-                "Direct surplus liquidity into high-yield liquid instruments.",
-                "Maintain current pacing while building emergency reserves toward target.",
+                alt_primary,
+                "Increase recurring investment SIP allocation to maximize long-term compound growth.",
+                "Maintain current pacing while expanding emergency fund months toward target.",
             ]
+
             competing = [
-                "Surplus deployment to long-term goals vs. building additional liquid safety margin."
+                "Accelerating Primary Goal Milestone vs. Deploying Surplus into Compounding Investments.",
+                "Maximizing Investment Yield vs. Retaining Higher Liquid Safety Margins.",
             ]
 
         return AgentResponse(

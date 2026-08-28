@@ -27,13 +27,13 @@
     (Port 80/443 -> 8000)         (Local Port 8080)
              |                               |
              v                               v
-       FastAPI Daemon                 Qwen 2.5 GGUF
-     (Systemd / Port 8000)            Model Weights
-             |
-             +---------------+
-                             |
-                             v
-                    Supabase PostgreSQL
+        FastAPI Daemon                 Qwen 3.8 27B GGUF
+      (Systemd / Port 8000)            Model Weights
+              |
+              +---------------+
+                              |
+                              v
+                     Supabase PostgreSQL
 ```
 
 ---
@@ -67,8 +67,8 @@ make LLAMA_OPENBLAS=1 -j$(nproc)
 
 # Download GGUF Model weights into /opt/models/
 mkdir -p /opt/models
-# Example download for Qwen 2.5 Coder / Instruct GGUF
-# curl -L -o /opt/models/qwen2.5-32b-instruct-q4_k_m.gguf <MODEL_URL>
+# Place Qwen 3.8 27B GGUF model weights in /opt/models/
+# Example: curl -L -o /opt/models/qwen-3.8-27b.gguf <HF_MODEL_URL>
 ```
 
 ### Step 4: Systemd Service Units
@@ -76,14 +76,14 @@ mkdir -p /opt/models
 #### `/etc/systemd/system/llamacpp.service`
 ```ini
 [Unit]
-Description=Native llama.cpp Inference Server
+Description=Native llama.cpp Inference Server (Qwen 3.8 27B GGUF)
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
 WorkingDirectory=/opt/llama.cpp
-ExecStart=/opt/llama.cpp/llama-server -m /opt/models/qwen2.5-32b-instruct-q4_k_m.gguf --port 8080 --host 127.0.0.1 -c 4096 --n-gpu-layers 0
+ExecStart=/opt/llama.cpp/llama-server -m /opt/models/qwen-3.8-27b.gguf --port 8080 --host 127.0.0.1 -c 4096 --n-gpu-layers 0
 Restart=always
 RestartSec=5
 

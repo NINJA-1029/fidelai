@@ -2,7 +2,8 @@
 
 ## 1. System Overview
 
-The Agentic AI Financial Management System continuously ingests heterogeneous financial data, extracts structured facts, updates an authoritative financial state model, executes deterministic analytics (risk/opportunity/forecast/goals), and orchestrates an AI reasoning agent (LangGraph + Qwen 2.5 32B/27B GGUF on native llama.cpp) to produce explainable, evidence-backed decision support.
+The Agentic AI Financial Management System continuously ingests heterogeneous financial data, extracts structured facts, updates an authoritative financial state model, executes deterministic analytics (risk/opportunity/forecast/goals), and orchestrates an AI reasoning agent (LangGraph + Qwen 3.8 27B GGUF on native llama.cpp) to produce explainable, evidence-backed decision support.
+
 
 ```
                          FLUTTER MOBILE APP
