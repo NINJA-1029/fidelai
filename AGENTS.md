@@ -161,13 +161,12 @@ All ingested financial metrics and state variables must support explicit uncerta
 - All developers must adhere to the standardized PR template in `.github/pull_request_template.md`.
 - Required sections: Summary of Changes, Associated Issue, Workstream and Role, Contracts and Fixtures Impacted, Verification and Testing, and Quality Checklist.
 
-### Pull Request & Merge Rules
+### Pull Request Rules
 - Feature PR target branch: All task PRs must target the `dev` branch (`--base dev`).
 - PR title must include issue reference: `feat(<scope>): description (issue #<NUMBER>)`.
 - PR must pass all unit and contract tests before review.
-- Once the user reviews and confirms satisfaction with the work, the PR is merged into `dev`, the local/remote feature branch is synced, and the issue is resolved.
-- Dev-to-Main Integration PR: After clean merge into `dev`, a Pull Request from `dev` into `main` (`gh pr create --base main --head dev ...`) must be created/updated to stage and track production release readiness.
-- King's Hand has final review and merge authority for cross-cutting changes.
+- Manual User Review & Merge: Agents open the Pull Request from the feature branch to `dev` and submit it for user review. The user personally compares the diff and merges the PR into `dev`. Agents must never auto-merge or create PRs into `main`.
+- King's Hand / Maintainer has final review and merge authority for cross-cutting changes.
 
 ---
 
