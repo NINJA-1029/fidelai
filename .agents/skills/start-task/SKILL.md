@@ -16,10 +16,10 @@ gh auth status
 git status
 ```
 
-### Step 2: Retrieve Assigned Open Issues
-List open issues assigned to the user or available in the milestone:
+### Step 2: Retrieve Assigned Open Issues (/lmi)
+List open issues assigned to the active user:
 ```bash
-gh issue list --state open --limit 20
+gh issue list --assignee "@me" --state open
 ```
 
 ### Step 3: Inspect Issue and Contracts
