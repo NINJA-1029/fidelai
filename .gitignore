@@ -37,6 +37,8 @@ htmlcov/
 .pub/
 frontend/flutter_app/build/
 frontend/flutter_app/.dart_tool/
+frontend/flutter_app/build_outputs/
+*.apk
 
 # Environment and Secrets
 .env
