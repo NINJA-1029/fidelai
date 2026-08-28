@@ -1,5 +1,6 @@
 import logging
-from typing import Optional, Dict, Any
+import time
+from typing import Optional, Dict, Any, List
 from shared.contracts.contracts import (
     Transaction,
     FinancialEvent,
@@ -22,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 class FinancialOrchestrator:
     """
-    Central orchestration service executing the Golden Path pipeline.
+    Central orchestration service executing the Golden Path pipeline:
+    Heterogeneous Ingestion -> Deterministic State Update -> Risk & Opportunity Detection
+    -> LangGraph Agent Reasoning -> Explainable Recommendation Output.
     """
 
     def __init__(self, agent: Optional[FinancialReasoningAgent] = None):
@@ -49,7 +52,7 @@ class FinancialOrchestrator:
             liquid_savings=50000.0,
         )
 
-        # 2. Attach detected signals
+        # 2. Attach detected deterministic signals
         state.risk_signals = RiskDetector.detect_risks(state)
         state.opportunity_signals = OpportunityDetector.detect_opportunities(state)
 
@@ -59,23 +62,46 @@ class FinancialOrchestrator:
         """
         Executes the full Golden Path: Ingestion -> State -> Risk -> Agent Reasoning -> Output.
         """
+        start_time = time.perf_counter()
         user_id = event.user_id
         repo.add_event(user_id, event)
 
         if event.transaction:
             repo.add_transaction(user_id, event.transaction)
 
-        # Recalculate financial state
+        # If event carries authoritative extracted available balance, sync repository
+        if event.payload and "available_balance" in event.payload:
+            extracted_bal = event.payload["available_balance"]
+            if extracted_bal is not None:
+                repo.set_balance(user_id, float(extracted_bal))
+
+        # Recalculate deterministic financial state
         updated_state = self.get_current_financial_state(user_id)
 
         # Run AI Reasoning Agent
         agent_req = AgentRequest(user_id=user_id, trigger_event=event)
         agent_response = self.agent.run(agent_req, updated_state)
 
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+        logger.info(f"Golden Path execution completed for {user_id} in {elapsed_ms:.2f}ms")
+
         return {
             "event": event,
             "financial_state": updated_state,
-            "agent_response": agent_response
+            "agent_response": agent_response,
+            "execution_time_ms": elapsed_ms,
+        }
+
+    def process_batch_events(self, user_id: str, events: List[FinancialEvent]) -> Dict[str, Any]:
+        """
+        Processes a sequence of financial events and produces state with latest reasoning.
+        """
+        latest_res = None
+        for evt in events:
+            latest_res = self.process_incoming_event(evt)
+        return latest_res or {
+            "financial_state": self.get_current_financial_state(user_id),
+            "agent_response": self.agent.run(AgentRequest(user_id=user_id), self.get_current_financial_state(user_id)),
         }
 
     def process_transaction(self, txn: Transaction) -> Dict[str, Any]:
