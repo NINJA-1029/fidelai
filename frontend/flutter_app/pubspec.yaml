@@ -1,5 +1,5 @@
 name: fidel_app
-description: "Agentic AI Financial Management System Mobile Application"
+description: "Fidel — Autonomous Agentic AI Financial Management System Mobile Application"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,8 +13,6 @@ dependencies:
   go_router: ^13.2.0
   dio: ^5.4.1
   fl_chart: ^0.66.2
-  flutter_secure_storage: ^9.0.0
-  flutter_svg: ^2.0.10+1
   intl: ^0.19.0
 
 dev_dependencies:
