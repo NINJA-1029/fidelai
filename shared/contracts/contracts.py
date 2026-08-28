@@ -263,10 +263,12 @@ class Recommendation(BaseModel):
 
 
 class AgentRequest(BaseModel):
-    user_id: str = Field(..., description="User identifier")
-    trigger_event: Optional[FinancialEvent] = Field(None, description="Optional incoming event triggering analysis")
-    user_query: Optional[str] = Field(None, description="Optional natural language query from user")
-    financial_state: Optional[FinancialState] = Field(None, description="Optional pre-computed state payload")
+    user_id: str = Field(..., alias="userId", description="User identifier")
+    trigger_event: Optional[FinancialEvent] = Field(None, alias="triggerEvent", description="Optional incoming event triggering analysis")
+    user_query: Optional[str] = Field(None, alias="userQuery", description="Optional natural language query from user")
+    financial_state: Optional[FinancialState] = Field(None, alias="financialState", description="Optional pre-computed state payload")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 class AgentResponse(BaseModel):
@@ -287,11 +289,13 @@ class AgentResponse(BaseModel):
 # --- What-If Simulation Contracts ---
 
 class SimulationRequest(BaseModel):
-    user_id: str = Field(..., description="User identifier")
-    scenario_type: str = Field(..., description="Type: unexpected_expense, income_change, expense_reduction, investment_sip")
+    user_id: str = Field(..., alias="userId", description="User identifier")
+    scenario_type: str = Field(..., alias="scenarioType", description="Type: unexpected_expense, income_change, expense_reduction, investment_sip")
     amount: float = Field(..., description="Simulated monetary delta")
-    effective_date: Optional[str] = Field(None, description="Target effective date YYYY-MM-DD")
+    effective_date: Optional[str] = Field(None, alias="effectiveDate", description="Target effective date YYYY-MM-DD")
     description: Optional[str] = Field(None, description="Contextual scenario description")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 class SimulationResult(BaseModel):
