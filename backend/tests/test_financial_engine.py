@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from shared.contracts.contracts import (
+    FinancialState,
     Transaction,
     IncomeRecord,
     Bill,
@@ -317,30 +318,194 @@ def test_signals_hydration_in_state():
     assert any(r.type == RiskType.LIQUIDITY for r in state.risk_signals)
 
 
-def test_forecasting_and_risk_detection():
-    user_id = "user_demo_01"
-    now = datetime.now(timezone.utc)
-    prefs = UserPreferences(user_id=user_id, minimum_cash_buffer=25000.0)
+def test_forecasting_daily_burn_and_bill_settlements():
+    user_id = "user_forecast_test"
+    now = datetime(2026, 8, 1, 0, 0, tzinfo=timezone.utc)
     
-    state = FinancialStateCalculator.calculate_state(
+    state = FinancialState(
         user_id=user_id,
-        current_balance=30000.0,
-        transactions=[],
-        income_records=[IncomeRecord(income_id="i1", user_id=user_id, source_name="Sal", amount=65000.0, currency="INR")],
-        bills=[Bill(bill_id="b1", user_id=user_id, biller_name="Rent", amount=18000.0, currency="INR", due_date=now + timedelta(days=4))],
-        goals=[],
-        preferences=prefs,
+        generated_at=now,
+        current_balance=50000.0,
+        available_cash=30000.0,
+        expected_monthly_income=60000.0,
+        income_variability=0.05,
+        income_confidence=0.95,
+        fixed_expenses=20000.0,
+        variable_expenses=15000.0,
+        discretionary_expenses=15000.0,
+        recurring_obligations=20000.0,
+        upcoming_obligations=20000.0,
+        savings=30000.0,
+        emergency_fund_months=1.5,
+        savings_rate=0.15,
+        financial_goals=[],
+        investments_total_value=0.0,
+        projected_balance=35000.0,
+        minimum_cash_buffer=25000.0,
+        risk_signals=[],
+        opportunity_signals=[],
     )
-    state.projected_balance = 19400.0  # Simulated projected value
-
-    forecast = BalanceForecaster.forecast_30_days(state)
+    
+    bills = [
+        Bill(bill_id="b1", user_id=user_id, biller_name="Rent", amount=20000.0, due_date=now + timedelta(days=5), is_paid=False)
+    ]
+    
+    forecast = BalanceForecaster.forecast_30_days(state, scheduled_bills=bills, start_date=now)
     assert forecast.horizon_days == 30
     assert len(forecast.projection_points) == 30
-
-    risks = RiskDetector.detect_risks(state)
-    assert len(risks) > 0
-    assert any(r.type == RiskType.LIQUIDITY for r in risks)
     
-    liq_risk = next(r for r in risks if r.type == RiskType.LIQUIDITY)
-    assert liq_risk.amount_impact == 5600.0  # 25,000 - 19,400 = 5,600
+    # Check day 0: daily burn deducted: 50,000 - (30,000/30 = 1000) = 49,000
+    assert forecast.projection_points[0].projected_balance == 49000.0
+    
+    # Check day 5: bill deducted
+    assert forecast.projection_points[5].projected_balance < 29000.0
+
+
+def test_forecasting_shock_simulation():
+    user_id = "user_shock_test"
+    now = datetime(2026, 8, 1, 0, 0, tzinfo=timezone.utc)
+    
+    state = FinancialState(
+        user_id=user_id,
+        generated_at=now,
+        current_balance=50000.0,
+        available_cash=40000.0,
+        expected_monthly_income=60000.0,
+        income_variability=0.05,
+        income_confidence=0.95,
+        fixed_expenses=20000.0,
+        variable_expenses=15000.0,
+        discretionary_expenses=15000.0,
+        recurring_obligations=20000.0,
+        upcoming_obligations=0.0,
+        savings=30000.0,
+        emergency_fund_months=1.5,
+        savings_rate=0.15,
+        financial_goals=[],
+        investments_total_value=0.0,
+        projected_balance=35000.0,
+        minimum_cash_buffer=25000.0,
+        risk_signals=[],
+        opportunity_signals=[],
+    )
+    
+    shock_forecast = BalanceForecaster.simulate_shock(state, shock_amount=15000.0, effective_day=0)
+    assert shock_forecast.projection_points[0].projected_balance == 34000.0  # (50k - 15k) - 1k daily burn
+
+
+def test_risk_triggers_comprehensive():
+    user_id = "user_risk_suite"
+    now = datetime.now(timezone.utc)
+    
+    # State with multiple risk indicators:
+    # 1. Liquidity deficit (projected 15k < buffer 25k)
+    # 2. Upcoming obligation gap (cash 5k < bills 18k)
+    # 3. Emergency fund depletion (< 1.0 month)
+    # 4. Spending spike (discretionary 16k)
+    # 5. Income volatility (variability 0.30)
+    # 6. Goal deficit (goal at risk)
+    state = FinancialState(
+        user_id=user_id,
+        generated_at=now,
+        current_balance=10000.0,
+        available_cash=5000.0,
+        expected_monthly_income=45000.0,
+        income_variability=0.30,
+        income_confidence=0.65,
+        fixed_expenses=22000.0,
+        variable_expenses=10000.0,
+        discretionary_expenses=16000.0,
+        recurring_obligations=22000.0,
+        upcoming_obligations=18000.0,
+        savings=10000.0,
+        emergency_fund_months=0.4,
+        savings_rate=0.0,
+        financial_goals=[
+            FinancialGoal(
+                goal_id="g1",
+                user_id=user_id,
+                title="Goal P1",
+                target_amount=50000.0,
+                current_amount=10000.0,
+                currency="INR",
+                target_date=now + timedelta(days=60),
+                monthly_contribution_required=20000.0,
+                priority=1,
+                status="at_risk",
+            )
+        ],
+        investments_total_value=0.0,
+        projected_balance=15000.0,
+        minimum_cash_buffer=25000.0,
+        risk_signals=[],
+        opportunity_signals=[],
+        user_preferences=UserPreferences(user_id=user_id, minimum_cash_buffer=25000.0, target_emergency_fund_months=3.0),
+    )
+    
+    risks = RiskDetector.detect_risks(state)
+    risk_types = {r.type for r in risks}
+    
+    assert RiskType.LIQUIDITY in risk_types
+    assert RiskType.UPCOMING_OBLIGATION in risk_types
+    assert RiskType.EMERGENCY_FUND_DEPLETION in risk_types
+    assert RiskType.SPENDING_SPIKE in risk_types
+    assert RiskType.INCOME_REDUCTION in risk_types
+    assert RiskType.GOAL_DEFICIT in risk_types
+
+
+def test_opportunity_triggers_comprehensive():
+    user_id = "user_opp_suite"
+    now = datetime.now(timezone.utc)
+    
+    # State with opportunities:
+    # 1. Expense reduction cushion (discretionary 8000 > 4000)
+    # 2. Surplus allocation (projected 45k > buffer 25k + 10k)
+    # 3. Goal acceleration (savings rate 35% with on_track goal)
+    # 4. High-yield savings (balance 60k > buffer 25k + 25k)
+    state = FinancialState(
+        user_id=user_id,
+        generated_at=now,
+        current_balance=60000.0,
+        available_cash=50000.0,
+        expected_monthly_income=75000.0,
+        income_variability=0.05,
+        income_confidence=0.95,
+        fixed_expenses=20000.0,
+        variable_expenses=10000.0,
+        discretionary_expenses=8000.0,
+        recurring_obligations=20000.0,
+        upcoming_obligations=5000.0,
+        savings=50000.0,
+        emergency_fund_months=2.5,
+        savings_rate=0.35,
+        financial_goals=[
+            FinancialGoal(
+                goal_id="g1",
+                user_id=user_id,
+                title="Vacation",
+                target_amount=40000.0,
+                current_amount=20000.0,
+                currency="INR",
+                target_date=now + timedelta(days=90),
+                monthly_contribution_required=6666.0,
+                priority=2,
+                status="on_track",
+            )
+        ],
+        investments_total_value=100000.0,
+        projected_balance=45000.0,
+        minimum_cash_buffer=25000.0,
+        risk_signals=[],
+        opportunity_signals=[],
+        user_preferences=UserPreferences(user_id=user_id, minimum_cash_buffer=25000.0),
+    )
+    
+    opps = OpportunityDetector.detect_opportunities(state)
+    opp_types = {o.type for o in opps}
+    
+    assert OpportunityType.EXPENSE_REDUCTION in opp_types
+    assert OpportunityType.SURPLUS_ALLOCATION in opp_types
+    assert OpportunityType.GOAL_ACCELERATION in opp_types
+    assert OpportunityType.HIGH_YIELD_SAVINGS in opp_types
+
 
