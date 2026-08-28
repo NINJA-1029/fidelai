@@ -52,17 +52,14 @@ Deterministic Tools             Qwen Reasoning (llama.cpp)
 
 ## 2. Absolute Prohibitions
 
-### Absolute Emoji Prohibition
-There is an absolute prohibition on emojis across this entire repository.
-- No emojis in source code.
-- No emojis in docstrings or comments.
-- No emojis in documentation or markdown files.
-- No emojis in Git commit messages or branch names.
-- No emojis in GitHub issue templates or issue descriptions.
-- No emojis in log output, stdout, or stderr.
-- No emojis in test fixtures or mock payloads.
-- No emojis in UI components, labels, or error messages.
-Use standard monochrome iconography (Lucide SVG or Flutter icon equivalents) for visual indicators.
+### Absolute Emoji and Icon Prohibition
+There is an absolute prohibition on emojis and icons across this entire repository and UI.
+- No emojis in source code, docstrings, comments, documentation, Git commits, branch names, issue templates, logs, test fixtures, or UI components.
+- No decorative icons, icon packs, or glyph clutter in UI components or labels. Use confident, minimalist typographic labels and monospaced indicators instead.
+
+### Strict Color Discipline Prohibition
+- Pure monochrome palette: Obsidian (`#000000`), Paper (`#ffffff`), Inkstone (`#181818`), Felt Gray (`#6d6d6d`), Slate Pill (`#636363`), Ash Mist (`#9a9a9a`).
+- No unnecessary colors, colorful badges, or gradient fills in UI controls. The iridescent gradient is restricted exclusively to atmospheric hero media.
 
 ### Absolute Container and Orchestration Prohibition
 - Do not use Docker.

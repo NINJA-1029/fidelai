@@ -5,7 +5,6 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Filter, ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 const initialTransactions = [
   {
@@ -51,7 +50,7 @@ const initialTransactions = [
   {
     id: "tx_demo_001",
     date: "2026-08-01",
-    description: "Monthly Salary - Tech Corp",
+    description: "Monthly Salary — Tech Corp",
     category: "Income",
     source: "Bank API",
     type: "credit",
@@ -73,30 +72,28 @@ export default function TransactionsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b border-border">
+    <div className="space-y-[46px]">
+      <div className="flex justify-between items-baseline pb-4 border-b border-border">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Financial Ledger</h2>
-          <p className="text-sm text-muted-foreground">
-            Normalized transaction records across SMS, OCR receipts, and bank feeds
-          </p>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-felt-gray block mb-1">
+            03 // INGESTION LEDGER
+          </span>
+          <h2 className="text-[32px] md:text-[40px] font-light leading-[1.10] tracking-tight text-foreground">
+            Financial Transactions
+          </h2>
         </div>
-        <Button size="sm">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Transaction
-        </Button>
+        <span className="text-[11px] font-mono text-felt-gray uppercase">
+          5 NORMALIZED RECORDS
+        </span>
       </div>
 
       <div className="flex gap-4 items-center">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-          <Input
-            placeholder="Search transactions by merchant, description, or category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <Input
+          placeholder="Filter by description, merchant, or category..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 font-mono text-[13px]"
+        />
 
         <div className="flex gap-2">
           {["all", "income", "housing", "groceries", "unexpected"].map((cat) => (
@@ -105,9 +102,8 @@ export default function TransactionsPage() {
               variant={categoryFilter === cat ? "default" : "outline"}
               size="sm"
               onClick={() => setCategoryFilter(cat)}
-              className="capitalize text-xs px-3"
             >
-              {cat}
+              {cat.toUpperCase()}
             </Button>
           ))}
         </div>
@@ -116,43 +112,31 @@ export default function TransactionsPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Transaction ID</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Ingestion Source</TableHead>
-            <TableHead>Confidence</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Transaction ID</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Date</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Description</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Category</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Source</TableHead>
+            <TableHead className="uppercase text-[11px] font-mono tracking-wider">Confidence</TableHead>
+            <TableHead className="text-right uppercase text-[11px] font-mono tracking-wider">Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.map((tx) => (
             <TableRow key={tx.id}>
-              <TableCell className="font-mono text-xs text-muted-foreground">{tx.id}</TableCell>
-              <TableCell className="font-mono text-xs">{tx.date}</TableCell>
-              <TableCell className="font-medium">{tx.description}</TableCell>
+              <TableCell className="font-mono text-[11px] text-felt-gray">{tx.id}</TableCell>
+              <TableCell className="font-mono text-[12px]">{tx.date}</TableCell>
+              <TableCell className="font-normal text-foreground">{tx.description}</TableCell>
               <TableCell>
-                <Badge
-                  variant={
-                    tx.category === "Unexpected"
-                      ? "destructive"
-                      : tx.category === "Income"
-                      ? "success"
-                      : "outline"
-                  }
-                >
-                  {tx.category}
+                <Badge variant={tx.category === "Income" ? "solid" : "outline"}>
+                  {tx.category.toUpperCase()}
                 </Badge>
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{tx.source}</TableCell>
-              <TableCell>
-                <span className="text-xs font-mono">{Math.round(tx.confidence * 100)}%</span>
+              <TableCell className="text-[11px] font-mono text-felt-gray">{tx.source}</TableCell>
+              <TableCell className="font-mono text-[11px] text-felt-gray">
+                {Math.round(tx.confidence * 100)}%
               </TableCell>
-              <TableCell
-                className={`text-right font-mono font-semibold ${
-                  tx.type === "credit" ? "text-emerald-500" : "text-red-500"
-                }`}
-              >
+              <TableCell className="text-right font-mono font-medium text-foreground">
                 {tx.type === "credit" ? "+" : "-"}INR {tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </TableCell>
             </TableRow>

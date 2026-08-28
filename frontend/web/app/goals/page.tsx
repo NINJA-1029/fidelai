@@ -1,7 +1,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Target, Plus, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
 const goals = [
   {
@@ -12,7 +11,7 @@ const goals = [
     targetDate: "2026-12-31",
     requiredMonthly: 5500.0,
     priority: 1,
-    status: "on_track",
+    status: "ON TRACK",
     description: "3 months of essential fixed costs to weather income shocks.",
   },
   {
@@ -23,85 +22,71 @@ const goals = [
     targetDate: "2026-11-30",
     requiredMonthly: 8333.0,
     priority: 3,
-    status: "at_risk",
-    description: "Year-end domestic vacation fund. At risk due to liquidity shock.",
+    status: "AT RISK // PAUSE RECOMMENDED",
+    description: "Domestic vacation fund. Advisor recommends pausing this cycle to protect liquidity.",
   },
 ];
 
 export default function GoalsPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b border-border">
+    <div className="space-y-[46px]">
+      <div className="flex justify-between items-baseline pb-4 border-b border-border">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Financial Goals & Pacing</h2>
-          <p className="text-sm text-muted-foreground">
-            Deterministic goal timeline calculations and competing priority tracking
-          </p>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-felt-gray block mb-1">
+            04 // PACING ENGINE
+          </span>
+          <h2 className="text-[32px] md:text-[40px] font-light leading-[1.10] tracking-tight text-foreground">
+            Financial Goals & Pacing
+          </h2>
         </div>
-        <Button size="sm">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Create New Goal
-        </Button>
+        <span className="text-[11px] font-mono text-felt-gray uppercase">
+          2 ACTIVE TARGETS
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {goals.map((goal) => {
           const progress = Math.round((goal.current / goal.target) * 100);
           return (
-            <Card key={goal.id} className="border-border bg-card">
+            <Card key={goal.id}>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-lg">{goal.title}</CardTitle>
-                  </div>
-                  <Badge
-                    variant={goal.status === "on_track" ? "success" : "warning"}
-                    className="capitalize text-xs"
-                  >
-                    {goal.status === "on_track" ? "On Track" : "At Risk"}
-                  </Badge>
+                <div className="flex items-baseline justify-between">
+                  <CardTitle className="text-[20px] font-normal">{goal.title}</CardTitle>
+                  <span className="text-[11px] font-mono text-felt-gray">{goal.status}</span>
                 </div>
-                <CardDescription className="text-xs">{goal.description}</CardDescription>
+                <CardDescription className="text-[12px]">{goal.description}</CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* Progress bar */}
+              <CardContent className="space-y-6">
                 <div>
-                  <div className="flex justify-between text-xs font-mono mb-1.5">
+                  <div className="flex justify-between text-[12px] font-mono mb-2 text-felt-gray">
                     <span>INR {goal.current.toLocaleString()}</span>
                     <span>INR {goal.target.toLocaleString()} ({progress}%)</span>
                   </div>
-                  <div className="w-full h-2 bg-muted rounded-none overflow-hidden">
+                  <div className="w-full h-1.5 bg-muted rounded-none overflow-hidden border border-border">
                     <div
-                      className={`h-full ${
-                        goal.status === "on_track" ? "bg-emerald-500" : "bg-amber-500"
-                      }`}
+                      className="h-full bg-foreground"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 border border-border bg-background">
-                    <span className="text-xs text-muted-foreground">Monthly Required</span>
-                    <p className="text-sm font-bold font-mono mt-1">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 border border-border bg-background">
+                    <span className="text-[10px] font-mono uppercase text-felt-gray block">MONTHLY PACING</span>
+                    <p className="text-[16px] font-mono font-normal mt-1 text-foreground">
                       INR {goal.requiredMonthly.toLocaleString()}/mo
                     </p>
                   </div>
-                  <div className="p-3 border border-border bg-background">
-                    <span className="text-xs text-muted-foreground">Target Deadline</span>
-                    <p className="text-sm font-bold font-mono mt-1">{goal.targetDate}</p>
+                  <div className="p-4 border border-border bg-background">
+                    <span className="text-[10px] font-mono uppercase text-felt-gray block">TARGET DEADLINE</span>
+                    <p className="text-[16px] font-mono font-normal mt-1 text-foreground">{goal.targetDate}</p>
                   </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground flex items-center justify-between pt-2 border-t border-border">
-                  <span>Priority Rank: P{goal.priority}</span>
-                  {goal.status === "at_risk" && (
-                    <span className="text-amber-500 font-medium">
-                      Advisor recommends pausing this cycle
-                    </span>
-                  )}
+                <div className="text-[11px] font-mono text-felt-gray flex items-center justify-between pt-2 border-t border-border">
+                  <span>PRIORITY: P{goal.priority}</span>
+                  <span>CONFIDENCE: 94%</span>
                 </div>
               </CardContent>
             </Card>

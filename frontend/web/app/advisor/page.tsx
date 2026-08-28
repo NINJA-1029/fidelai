@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bot, Send, ShieldCheck, CheckCircle2, ArrowRight, Sparkles, Scale, RefreshCw } from "lucide-react";
 
 interface AdvisorMessage {
   role: "user" | "assistant";
@@ -34,42 +33,42 @@ export default function AIAdvisorPage() {
     {
       role: "assistant",
       content:
-        "I have analyzed your updated financial state following the recent INR 12,000 unexpected expense. Here is your deterministic evidence synthesis and recommended action.",
+        "Following an unexpected medical debit of INR 12,000.00, your 30-day projected reserve dips to INR 19,400.00 against your INR 25,000.00 target safety buffer.",
       recommendation: {
         title: "Preserve Near-Term Liquidity",
-        priority: "high",
+        priority: "HIGH PRIORITY",
         description:
-          "Your 30-day projected balance of INR 19,400 falls INR 5,600 below your preferred cash buffer of INR 25,000. With upcoming bills of INR 18,000 due, we recommend deferring the vacation goal contribution and trimming discretionary spend.",
-        impact: "INR 5,600 Deficit Shielded",
+          "An unexpected expense of INR 12,000 combined with upcoming obligations of INR 18,000 will compress liquid reserves below your configured INR 25,000 minimum safety threshold.",
+        impact: "INR 5,600.00 DEFICIT SHIELDED",
       },
       evidence: [
         {
           metric: "current_balance",
-          label: "Current Balance",
+          label: "EVIDENCE 01 // BALANCE",
           value: "INR 30,000.00",
-          status: "confirmed",
+          status: "CONFIRMED",
           detail: "Post-debit liquid funds",
         },
         {
           metric: "projected_balance",
-          label: "Projected Balance",
+          label: "EVIDENCE 02 // PROJECTION",
           value: "INR 19,400.00",
-          status: "estimated",
+          status: "ESTIMATED",
           detail: "30-day deterministic run-rate",
         },
         {
           metric: "minimum_cash_buffer",
-          label: "Safety Buffer",
+          label: "EVIDENCE 03 // BUFFER",
           value: "INR 25,000.00",
-          status: "confirmed",
-          detail: "Configured user preference",
+          status: "CONFIRMED",
+          detail: "User safety threshold",
         },
         {
           metric: "upcoming_obligations",
-          label: "Upcoming Obligations",
+          label: "EVIDENCE 04 // OBLIGATIONS",
           value: "INR 18,000.00",
-          status: "confirmed",
-          detail: "Rent & utilities due within 6 days",
+          status: "CONFIRMED",
+          detail: "Rent & bills due in 6 days",
         },
       ],
       alternatives: [
@@ -115,9 +114,9 @@ export default function AIAdvisorPage() {
             recommendation: data.recommendation,
             evidence: data.evidence.map((ev: any) => ({
               metric: ev.metric,
-              label: ev.metric.replace(/_/g, " ").toUpperCase(),
+              label: `EVIDENCE // ${ev.metric.toUpperCase()}`,
               value: typeof ev.value === "number" ? `INR ${ev.value.toLocaleString()}` : String(ev.value),
-              status: ev.status,
+              status: ev.status?.toUpperCase() || "CONFIRMED",
               detail: ev.description,
             })),
             alternatives: data.alternatives,
@@ -126,10 +125,9 @@ export default function AIAdvisorPage() {
           },
         ]);
       } else {
-        throw new Error("Local API unavailable");
+        throw new Error("Local API unreachable");
       }
     } catch (err) {
-      // Offline fallback mock
       setMessages((prev) => [
         ...prev,
         {
@@ -138,13 +136,12 @@ export default function AIAdvisorPage() {
             "Based on deterministic balance projection of INR 19,400 against your INR 25,000 threshold, reducing non-essential commitments preserves liquidity without liquidating investments.",
           recommendation: {
             title: "Maintain Cash Buffer",
-            priority: "high",
+            priority: "HIGH PRIORITY",
             description: "Defer secondary goals and reduce discretionary spend by INR 4,000.",
-            impact: "INR 4,000 Cash Protected",
           },
           evidence: [
-            { metric: "proj", label: "Projected Cash", value: "INR 19,400", status: "estimated", detail: "30-day forecast" },
-            { metric: "buf", label: "Buffer Target", value: "INR 25,000", status: "confirmed", detail: "Safety threshold" },
+            { metric: "proj", label: "EVIDENCE // PROJECTION", value: "INR 19,400", status: "ESTIMATED", detail: "30-day forecast" },
+            { metric: "buf", label: "EVIDENCE // BUFFER", value: "INR 25,000", status: "CONFIRMED", detail: "Safety threshold" },
           ],
           alternatives: [
             "Pause discretionary dining for 2 weeks",
@@ -160,17 +157,19 @@ export default function AIAdvisorPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center pb-4 border-b border-border">
+    <div className="space-y-[46px]">
+      <div className="flex justify-between items-baseline pb-4 border-b border-border">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Autonomous AI Advisor</h2>
-          <p className="text-sm text-muted-foreground">
-            Explainable, evidence-backed decision support powered by local Qwen on llama.cpp
-          </p>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-felt-gray block mb-1">
+            02 // REASONING SYNTHESIS
+          </span>
+          <h2 className="text-[32px] md:text-[40px] font-light leading-[1.10] tracking-tight text-foreground">
+            Strategic AI Advisor
+          </h2>
         </div>
-        <Badge variant="outline" className="px-3 py-1">
-          Inference: Native Local
-        </Badge>
+        <span className="text-[11px] font-mono text-felt-gray uppercase">
+          LOCAL QWEN 2.5 // NATIVE
+        </span>
       </div>
 
       <div className="space-y-6">
@@ -178,102 +177,88 @@ export default function AIAdvisorPage() {
           <div key={idx} className="space-y-4">
             {msg.role === "user" ? (
               <div className="flex justify-end">
-                <div className="bg-primary text-primary-foreground p-4 max-w-lg rounded-none text-sm">
+                <div className="bg-muted p-5 max-w-lg rounded-none text-[14px] leading-relaxed border border-border text-foreground font-mono">
                   {msg.content}
                 </div>
               </div>
             ) : (
-              <Card className="border-border bg-card">
+              <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Bot className="w-5 h-5 text-primary" />
-                      <CardTitle className="text-base">Fidel Strategic Reasoner</CardTitle>
-                    </div>
+                  <div className="flex justify-between items-baseline">
+                    <CardTitle className="text-[20px] font-normal">
+                      Fidel Strategic Reasoning
+                    </CardTitle>
                     {msg.confidence && (
-                      <Badge variant="default" className="text-xs">
-                        Confidence: {Math.round(msg.confidence * 100)}%
-                      </Badge>
+                      <span className="text-[11px] font-mono text-felt-gray">
+                        CONFIDENCE: {Math.round(msg.confidence * 100)}%
+                      </span>
                     )}
                   </div>
-                  <CardDescription className="text-xs mt-1">
-                    Grounded strictly in deterministic financial facts
+                  <CardDescription className="text-[11px] uppercase tracking-wider">
+                    Grounded in deterministic financial state metrics
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                  {/* Recommendation banner */}
                   {msg.recommendation && (
-                    <div className="p-4 bg-muted/40 border border-border">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-base">{msg.recommendation.title}</h4>
-                        <Badge variant="destructive" className="uppercase text-xs">
-                          {msg.recommendation.priority}
-                        </Badge>
+                    <div className="p-5 bg-muted/40 border border-border">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-normal text-[18px]">{msg.recommendation.title}</h4>
+                        <Badge variant="default">{msg.recommendation.priority}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                      <p className="text-[15px] leading-[1.6] text-felt-gray">
                         {msg.recommendation.description}
                       </p>
                     </div>
                   )}
 
-                  {/* Evidence Matrix */}
                   {msg.evidence && msg.evidence.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                        Deterministic Evidence Metrics
-                      </h5>
+                    <div className="space-y-3">
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-felt-gray block">
+                        DETERMINISTIC EVIDENCE MATRIX
+                      </span>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                        {msg.evidence.map((ev: any, evIdx: number) => (
-                          <div key={evIdx} className="p-3 border border-border bg-background">
-                            <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        {msg.evidence.map((ev, evIdx) => (
+                          <div key={evIdx} className="p-4 border border-border bg-background">
+                            <div className="flex justify-between items-center text-[10px] font-mono text-felt-gray">
                               <span>{ev.label}</span>
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                {ev.status}
-                              </Badge>
+                              <span>{ev.status}</span>
                             </div>
-                            <p className="text-sm font-bold font-mono mt-1.5">{ev.value}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{ev.detail}</p>
+                            <p className="text-[18px] font-mono mt-1.5 text-foreground">{ev.value}</p>
+                            <p className="text-[11px] text-felt-gray mt-1 font-mono">{ev.detail}</p>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Tradeoffs Evaluated */}
                   {msg.competing_objectives && msg.competing_objectives.length > 0 && (
-                    <div className="p-4 bg-background border border-border">
-                      <div className="flex items-center space-x-2 text-xs font-semibold text-muted-foreground uppercase mb-2">
-                        <Scale className="w-4 h-4" />
-                        <span>Competing Objectives & Tradeoffs Evaluated</span>
-                      </div>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        {msg.competing_objectives.map((obj: string, oIdx: number) => (
-                          <li key={oIdx} className="flex items-start space-x-2">
-                            <span className="text-primary font-bold mr-1">-</span>
-                            <span>{obj}</span>
-                          </li>
+                    <div className="p-5 border border-border bg-background space-y-2">
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-felt-gray block">
+                        COMPETING OBJECTIVES & TRADEOFFS EVALUATED
+                      </span>
+                      <ul className="space-y-1 text-[13px] text-felt-gray font-mono">
+                        {msg.competing_objectives.map((obj, oIdx) => (
+                          <li key={oIdx}>— {obj}</li>
                         ))}
                       </ul>
                     </div>
                   )}
 
-                  {/* Actionable Alternatives */}
                   {msg.alternatives && msg.alternatives.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                        Actionable Alternative Options
-                      </h5>
+                    <div className="space-y-3">
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-felt-gray block">
+                        ACTIONABLE ALTERNATIVE OPTIONS
+                      </span>
                       <div className="space-y-2">
-                        {msg.alternatives.map((alt: string, altIdx: number) => (
+                        {msg.alternatives.map((alt, altIdx) => (
                           <div
                             key={altIdx}
-                            className="p-3 border border-border bg-muted/20 flex items-center justify-between hover:bg-muted/40 transition-colors"
+                            className="p-4 border border-border bg-muted/20 flex items-center justify-between text-[14px]"
                           >
-                            <span className="text-sm">{alt}</span>
-                            <Button size="sm" variant="outline" className="text-xs px-3 py-1 h-7">
-                              Select
-                              <ArrowRight className="w-3 h-3 ml-1" />
+                            <span>{alt}</span>
+                            <Button size="sm" variant="outline">
+                              SELECT
                             </Button>
                           </div>
                         ))}
@@ -287,24 +272,16 @@ export default function AIAdvisorPage() {
         ))}
       </div>
 
-      {/* Query Input Box */}
       <form onSubmit={handleSend} className="flex gap-3 sticky bottom-4 bg-background pt-2">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask Fidel about tradeoffs, goal adjustments, or cash flow simulations..."
           disabled={isLoading}
-          className="flex-1"
+          className="flex-1 font-mono text-[13px]"
         />
         <Button type="submit" disabled={isLoading || !query.trim()}>
-          {isLoading ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              Send
-              <Send className="w-4 h-4 ml-1.5" />
-            </>
-          )}
+          {isLoading ? "ANALYZING..." : "SUBMIT"}
         </Button>
       </form>
     </div>

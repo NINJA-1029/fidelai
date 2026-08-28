@@ -69,8 +69,10 @@ Full-viewport organic gradient: soft sage green (`rgb(160, 224, 171)`) dissolvin
 
 ---
 
-## 5. Absolute Rules
+## 5. Absolute System Rules
 
-- Zero Emojis anywhere in the codebase, UI, labels, or documentation.
-- No shadows or elevation — flat surfaces with hairline 1px borders.
-- Strict 0px vs 75px binary radius discipline.
+- **Zero Emojis & Zero Icons**: Absolute prohibition on emojis and icon glyphs. The interface is purely typographic and editorial.
+- **Strict Monochrome Discipline**: Black (`#000000`), White (`#ffffff`), and calibrated grays (`#181818`, `#6d6d6d`, `#636363`, `#9a9a9a`) form the entire interface. No chromatic colors (red/green/amber) on cards, buttons, or badges.
+- **Hero-Only Gradient**: The iridescent fade is restricted exclusively to the hero backdrop as atmospheric media.
+- **Flat Elevation**: No box-shadows or elevation — sharp hairline 1px borders only.
+- **Binary Radius**: Strict 0px radius for cards, tables, inputs, and images; 75px full pill exclusively for buttons and tags.

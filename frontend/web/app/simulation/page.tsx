@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SlidersHorizontal, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function SimulationPage() {
   const [scenarioType, setScenarioType] = useState("unexpected_expense");
@@ -49,10 +48,9 @@ export default function SimulationPage() {
         const data = await res.json();
         setResult(data);
       } else {
-        throw new Error("Failed to reach simulation endpoint");
+        throw new Error("Local simulation offline");
       }
     } catch (err) {
-      // Local fallback calculation
       const numAmt = parseFloat(amount) || 0;
       const base = 31400.0;
       const sim = base - numAmt;
@@ -61,7 +59,7 @@ export default function SimulationPage() {
         simulated_projected_balance: sim,
         buffer_violation_risk: sim < 25000.0,
         impact_summary: `An outflow of INR ${numAmt.toLocaleString()} projects end-balance at INR ${sim.toLocaleString()}. ${
-          sim < 25000 ? "Violates INR 25,000 buffer." : "Buffer preserved."
+          sim < 25000 ? "Violates INR 25,000 buffer by INR " + (25000 - sim).toLocaleString() + "." : "Buffer preserved."
         }`,
         goal_impacts: [
           {
@@ -81,123 +79,135 @@ export default function SimulationPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b border-border">
+    <div className="space-y-[46px]">
+      <div className="flex justify-between items-baseline pb-4 border-b border-border">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">What-If Scenario Simulation</h2>
-          <p className="text-sm text-muted-foreground">
-            Test hypothetical cash flow shocks and evaluate buffer & goal impact before committing funds
-          </p>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-felt-gray block mb-1">
+            05 // DETERMINISTIC SIMULATION
+          </span>
+          <h2 className="text-[32px] md:text-[40px] font-light leading-[1.10] tracking-tight text-foreground">
+            What-If Scenario Analysis
+          </h2>
         </div>
+        <span className="text-[11px] font-mono text-felt-gray uppercase">
+          DELTA CALCULATOR
+        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Simulation Controls */}
-        <Card className="lg:col-span-1 border-border bg-card">
+        {/* Controls */}
+        <Card className="lg:col-span-1">
           <CardHeader>
-            <div className="flex items-center space-x-2">
-              <SlidersHorizontal className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">Scenario Parameters</CardTitle>
-            </div>
-            <CardDescription>Configure hypothetical financial events</CardDescription>
+            <CardDescription className="uppercase text-[11px] tracking-wider">
+              Input Parameters
+            </CardDescription>
+            <CardTitle className="text-[20px] font-normal">
+              Configure Scenario
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSimulate} className="space-y-4">
+            <form onSubmit={handleSimulate} className="space-y-5">
               <div>
-                <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Scenario Type
+                <label className="text-[10px] font-mono uppercase text-felt-gray block mb-1">
+                  SCENARIO TYPE
                 </label>
                 <select
                   value={scenarioType}
                   onChange={(e) => setScenarioType(e.target.value)}
-                  className="w-full mt-1.5 h-10 border border-input bg-background px-3 py-2 text-sm rounded-none focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-10 border border-border bg-background px-3 py-2 text-[13px] rounded-none focus:outline-none focus:border-foreground font-mono"
                 >
                   <option value="unexpected_expense">Unexpected Outflow / Expense</option>
                   <option value="income_change">Income Change / Reduction</option>
                   <option value="expense_reduction">Discretionary Expense Trim</option>
-                  <option value="investment_sip">New Investment Allocation</option>
+                  <option value="investment_sip">New Investment Contribution</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Amount (INR)
+                <label className="text-[10px] font-mono uppercase text-felt-gray block mb-1">
+                  AMOUNT (INR)
                 </label>
                 <Input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1.5 font-mono"
+                  className="font-mono text-[13px]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Description / Context
+                <label className="text-[10px] font-mono uppercase text-felt-gray block mb-1">
+                  DESCRIPTION / CONTEXT
                 </label>
                 <Input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="mt-1.5"
+                  className="font-mono text-[13px]"
                 />
               </div>
 
               <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Run Deterministic Simulation"}
+                {isLoading ? "CALCULATING..." : "RUN SIMULATION"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Simulation Output */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card className="border-border bg-card">
+        {/* Results */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">Projected Trajectory Impact</CardTitle>
-                <Badge
-                  variant={result.buffer_violation_risk ? "destructive" : "success"}
-                  className="text-xs"
-                >
-                  {result.buffer_violation_risk ? "Buffer Violation Triggered" : "Buffer Preserved"}
-                </Badge>
+              <div className="flex justify-between items-baseline">
+                <div>
+                  <CardDescription className="uppercase text-[11px] tracking-wider">
+                    Trajectory Comparison
+                  </CardDescription>
+                  <CardTitle className="text-[20px] font-normal mt-1">
+                    Projected Impact
+                  </CardTitle>
+                </div>
+                <span className="text-[11px] font-mono text-felt-gray uppercase">
+                  {result.buffer_violation_risk ? "[ BUFFER VIOLATION ]" : "[ BUFFER PRESERVED ]"}
+                </span>
               </div>
-              <CardDescription>Deterministic comparison against baseline financial state</CardDescription>
             </CardHeader>
+
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 border border-border bg-background">
-                  <span className="text-xs text-muted-foreground">Baseline 30-Day Projected</span>
-                  <p className="text-xl font-bold font-mono mt-1">
+                  <span className="text-[10px] font-mono uppercase text-felt-gray block">
+                    BASELINE 30-DAY PROJECTED
+                  </span>
+                  <p className="text-[22px] font-mono font-normal mt-1 text-foreground">
                     INR {result.baseline_projected_balance?.toLocaleString()}
                   </p>
                 </div>
 
                 <div className="p-4 border border-border bg-background">
-                  <span className="text-xs text-muted-foreground">Simulated Post-Shock Balance</span>
-                  <p
-                    className={`text-xl font-bold font-mono mt-1 ${
-                      result.buffer_violation_risk ? "text-amber-500" : "text-emerald-500"
-                    }`}
-                  >
+                  <span className="text-[10px] font-mono uppercase text-felt-gray block">
+                    SIMULATED POST-SHOCK
+                  </span>
+                  <p className="text-[22px] font-mono font-normal mt-1 text-foreground">
                     INR {result.simulated_projected_balance?.toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-muted/40 border border-border">
-                <h5 className="font-semibold text-sm">Deterministic Impact Summary</h5>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+              <div className="p-5 bg-muted/40 border border-border">
+                <span className="text-[10px] font-mono uppercase text-felt-gray block mb-1">
+                  IMPACT SUMMARY
+                </span>
+                <p className="text-[15px] leading-[1.6] text-felt-gray">
                   {result.impact_summary}
                 </p>
               </div>
 
               {result.recommendation && (
-                <div className="p-4 border border-border bg-background">
-                  <span className="text-xs text-primary font-bold uppercase tracking-wide">
-                    Agent Decision Strategy
+                <div className="p-5 border border-border bg-background">
+                  <span className="text-[10px] font-mono uppercase text-felt-gray block mb-1">
+                    STRATEGIC GUIDANCE
                   </span>
-                  <p className="text-sm mt-1">{result.recommendation}</p>
+                  <p className="text-[15px] text-foreground leading-[1.6]">{result.recommendation}</p>
                 </div>
               )}
             </CardContent>
