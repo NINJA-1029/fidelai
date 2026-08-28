@@ -27,6 +27,9 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+*.db
+*.sqlite3
+
 
 # Flutter / Dart
 .dart_tool/

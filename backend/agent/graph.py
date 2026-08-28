@@ -13,6 +13,7 @@ from shared.contracts.contracts import (
 )
 from backend.agent.llm_provider import LLMProvider, MockLLMProvider
 from backend.agent.tools import AgentTools
+from backend.repositories.financial_repository import repo
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class AgentWorkflowState(BaseModel):
     user_query: Optional[str] = None
     financial_state: Optional[FinancialState] = None
     evidence: List[Evidence] = Field(default_factory=list)
+    past_memories: List[AgentResponse] = Field(default_factory=list)
     raw_llm_output: Optional[str] = None
     retry_attempted: bool = False
     final_response: Optional[AgentResponse] = None
@@ -30,11 +32,12 @@ class AgentWorkflowState(BaseModel):
 
 class FinancialReasoningAgent:
     """
-    Orchestrates the multi-stage financial reasoning workflow:
-    1. Tool Execution & Fact Gathering
-    2. Structured LLM Synthesis
-    3. Schema Validation & Self-Correction Retry
-    4. Deterministic Fallback Generation
+    Orchestrates the multi-stage financial reasoning workflow with Long-Term Memory:
+    1. Retrieve Past Decision Memories
+    2. Tool Execution & Fact Gathering
+    3. Structured LLM Synthesis
+    4. Schema Validation & Self-Correction Retry
+    5. Deterministic Fallback Generation & Memory Persistence
     """
 
     def __init__(self, llm_provider: Optional[LLMProvider] = None):
@@ -48,14 +51,16 @@ class FinancialReasoningAgent:
             financial_state=state,
         )
 
-        # Stage 1: Gather deterministic facts and evidence
+        # Stage 1: Gather deterministic facts, evidence, and long-term memory
         evidence = AgentTools.gather_evidence_for_liquidity(state)
         workflow_state.evidence = evidence
+        past_memories = repo.get_agent_memories(request.user_id, limit=3)
+        workflow_state.past_memories = past_memories
 
         # Stage 2: Build prompts
         system_prompt = (
             "You are a fiduciary AI financial strategist and decision advisor. "
-            "Reason strictly over the provided factual evidence and deterministic calculations. "
+            "Reason strictly over the provided factual evidence, past advice history, and deterministic calculations. "
             "Never perform financial arithmetic or invent monetary figures. "
             "Resolve competing objectives (such as liquidity preservation vs goal contributions). "
             "Provide actionable alternatives. "
@@ -63,7 +68,7 @@ class FinancialReasoningAgent:
             "Output valid JSON conforming exactly to the AgentResponse schema."
         )
 
-        user_prompt = self._build_prompt(state, evidence, request.user_query)
+        user_prompt = self._build_prompt(state, evidence, request.user_query, past_memories)
 
         # Stage 3: LLM Inference with Self-Correction
         try:
@@ -71,6 +76,7 @@ class FinancialReasoningAgent:
             workflow_state.raw_llm_output = raw_output
             response = self._parse_and_validate(raw_output, request.user_id, evidence)
             workflow_state.final_response = response
+            repo.save_agent_memory(request.user_id, response, request.user_query)
             return response
 
         except (json.JSONDecodeError, ValidationError, KeyError, TypeError) as parse_err:
@@ -82,20 +88,26 @@ class FinancialReasoningAgent:
                 corrected_output = self.llm_provider.generate(prompt=retry_prompt, system_prompt=system_prompt)
                 response = self._parse_and_validate(corrected_output, request.user_id, evidence)
                 workflow_state.final_response = response
+                repo.save_agent_memory(request.user_id, response, request.user_query)
                 return response
             except Exception as retry_err:
                 logger.warning(f"Self-correction failed: {retry_err}. Falling back to deterministic synthesizer.")
-                return self._deterministic_fallback(request.user_id, state, evidence)
+                fallback_resp = self._deterministic_fallback(request.user_id, state, evidence)
+                repo.save_agent_memory(request.user_id, fallback_resp, request.user_query)
+                return fallback_resp
 
         except Exception as e:
             logger.warning(f"LLM execution error: {e}. Executing deterministic fallback recommendation.")
-            return self._deterministic_fallback(request.user_id, state, evidence)
+            fallback_resp = self._deterministic_fallback(request.user_id, state, evidence)
+            repo.save_agent_memory(request.user_id, fallback_resp, request.user_query)
+            return fallback_resp
 
     def _build_prompt(
         self,
         state: FinancialState,
         evidence: List[Evidence],
         query: Optional[str],
+        past_memories: Optional[List[AgentResponse]] = None,
     ) -> str:
         evidence_lines = [
             f"- {e.metric}: {e.value} (threshold: {e.threshold}, status: {e.status.value}) - {e.description}"
@@ -109,6 +121,14 @@ class FinancialReasoningAgent:
             else "No explicit goals configured"
         )
 
+        memory_section = ""
+        if past_memories:
+            mem_lines = [
+                f"- Past Recommendation: {m.recommendation.title} (Priority: {m.recommendation.priority}, Category: {m.recommendation.category})"
+                for m in past_memories
+            ]
+            memory_section = f"\nHISTORICAL ADVICE MEMORY:\n" + "\n".join(mem_lines) + "\n"
+
         return (
             f"FINANCIAL CONTEXT:\n"
             f"- User ID: {state.user_id}\n"
@@ -118,7 +138,8 @@ class FinancialReasoningAgent:
             f"- Minimum Preferred Cash Buffer: INR {state.minimum_cash_buffer:,.2f}\n"
             f"- Upcoming Obligations (Next 30 Days): INR {state.upcoming_obligations:,.2f}\n"
             f"- Active Goals: {goals_str}\n"
-            f"- Investment Portfolio Value: INR {state.investments_total_value:,.2f}\n\n"
+            f"- Investment Portfolio Value: INR {state.investments_total_value:,.2f}\n"
+            f"{memory_section}\n"
             f"DETERMINISTIC EVIDENCE METRICS:\n"
             f"{evidence_str}\n\n"
             f"USER QUERY:\n"
@@ -276,4 +297,3 @@ class FinancialReasoningAgent:
             competing_objectives_considered=competing,
             generated_at=datetime.now(timezone.utc),
         )
-
