@@ -61,7 +61,7 @@ source .venv_system/bin/activate && PYTHONPATH=. pytest backend/tests/ -v
 # cd frontend/flutter_app && flutter test
 ```
 
-### Step 9: Push and Open Pull Request Targeting dev
+### Step 9: Push and Open Pull Request Targeting dev Only
 Push the feature branch and create a PR targeting `dev` referencing the issue using the common template structure (`.github/pull_request_template.md`):
 ```bash
 git push -u origin HEAD
@@ -71,25 +71,8 @@ gh pr create --base dev --title "feat(<scope>): implement issue #<ISSUE_NUMBER>"
 ### Step 10: Gracefully Handle Project V2
 If GitHub Project V2 is configured, update the item status to In Review; if automation fails due to API permissions, proceed without blocking.
 
-### Step 11: Merge into dev Upon User Satisfaction
-Once the user reviews and confirms satisfaction with the work:
-1. Merge the PR or feature branch into `dev`:
-```bash
-gh pr merge --squash --delete-branch || (git checkout dev && git merge --squash feature/issue-<ISSUE_NUMBER>-<short-slug> && git commit -m "feat(<scope>): merge issue #<ISSUE_NUMBER> into dev" && git push origin dev)
-```
-2. Close the linked issue if not auto-closed:
-```bash
-gh issue close <ISSUE_NUMBER> --comment "Resolved and merged into dev."
-```
+### Step 11: Present PR for User Review
+Present the open Pull Request link (`feature -> dev`) and test verification summary to the user. Do NOT auto-merge or create PRs to `main`; the user will personally compare the diff and merge into `dev`.
 
-### Step 12: Create or Update Dev-to-Main Release Pull Request
-After clean merge into `dev`, ensure a PR exists to merge `dev` into `main` using the common template:
-```bash
-gh pr create --base main --head dev --title "chore(release): merge dev into main" --body "## Summary of Changes
-Syncs active sprint development from dev branch into release branch main.
-
-## Verification and Testing
-All automated test suites and contract validations passed." || true
-```
 
 
