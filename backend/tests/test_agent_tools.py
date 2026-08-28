@@ -1,7 +1,13 @@
 import json
 import re
 import pytest
-from shared.contracts.contracts import AgentRequest, FinancialState, UserPreferences
+from shared.contracts.contracts import (
+    AgentRequest,
+    AgentResponse,
+    FinancialState,
+    UserPreferences,
+    UncertaintyStatus,
+)
 from backend.agent.llm_provider import LLMProvider, LlamaCppProvider, MockLLMProvider
 from backend.agent.tools import AgentTools
 from backend.agent.graph import FinancialReasoningAgent
@@ -106,6 +112,10 @@ def test_agent_tools_evidence_gathering():
     assert metrics["projected_balance"] == 19400.0
     assert metrics["minimum_cash_buffer"] == 25000.0
 
+    statuses = {e.metric: e.status for e in evidence}
+    assert statuses["current_balance"] == UncertaintyStatus.CONFIRMED
+    assert statuses["projected_balance"] == UncertaintyStatus.ESTIMATED
+
 
 def test_agent_reasoning_flow():
     state = FinancialState(
@@ -125,6 +135,7 @@ def test_agent_reasoning_flow():
     req = AgentRequest(user_id="user_demo_01", user_query="What should I do about my balance deficit?")
     response = agent.run(req, state)
 
+    assert isinstance(response, AgentResponse)
     assert response.user_id == "user_demo_01"
     assert response.recommendation is not None
     assert response.confidence >= 0.8
@@ -132,11 +143,118 @@ def test_agent_reasoning_flow():
     assert len(response.alternatives) > 0
 
 
-def test_zero_emojis_in_llm_provider_code():
-    provider = MockLLMProvider()
-    out = provider.generate("Test prompt")
+def test_agent_self_correction_retry():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+    )
+    # Fails with malformed JSON on first attempt, corrects and succeeds on retry
+    mock_provider = MockLLMProvider(fail_malformed_json_once=True)
+    agent = FinancialReasoningAgent(llm_provider=mock_provider)
+    req = AgentRequest(user_id="user_demo_01", user_query="Assess cash flow status")
+    response = agent.run(req, state)
+
+    assert isinstance(response, AgentResponse)
+    assert response.user_id == "user_demo_01"
+    assert mock_provider._calls_count == 2
+    assert response.recommendation is not None
+
+
+def test_agent_deterministic_fallback_on_failure():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+    )
+    failing_provider = MockLLMProvider(should_fail=True)
+    agent = FinancialReasoningAgent(llm_provider=failing_provider)
+    req = AgentRequest(user_id="user_demo_01", user_query="What to do?")
+    response = agent.run(req, state)
+
+    assert isinstance(response, AgentResponse)
+    assert response.user_id == "user_demo_01"
+    assert "resp_fallback_" in response.response_id
+    assert response.recommendation.priority == "high"
+    assert response.recommendation.impact_amount == 5600.0  # 25000 - 19400
+    assert len(response.alternatives) >= 2
+
+
+def test_agent_deterministic_fallback_surplus():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=45000.0,
+        available_cash=27000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=35000.0,
+        minimum_cash_buffer=25000.0,
+    )
+    failing_provider = MockLLMProvider(should_fail=True)
+    agent = FinancialReasoningAgent(llm_provider=failing_provider)
+    req = AgentRequest(user_id="user_demo_01")
+    response = agent.run(req, state)
+
+    assert isinstance(response, AgentResponse)
+    assert response.recommendation.title == "Deploy Surplus Liquidity"
+    assert response.recommendation.priority == "medium"
+    assert len(response.alternatives) >= 2
+
+
+def test_zero_emojis_in_reasoning_and_fallback():
+    state = FinancialState(
+        user_id="user_demo_01",
+        current_balance=30000.0,
+        available_cash=12000.0,
+        expected_monthly_income=65000.0,
+        fixed_expenses=24000.0,
+        variable_expenses=12000.0,
+        discretionary_expenses=8500.0,
+        recurring_obligations=24000.0,
+        upcoming_obligations=18000.0,
+        projected_balance=19400.0,
+        minimum_cash_buffer=25000.0,
+    )
+    # Test standard output
+    agent = FinancialReasoningAgent(llm_provider=MockLLMProvider())
+    req = AgentRequest(user_id="user_demo_01")
+    res_normal = agent.run(req, state)
+
+    # Test fallback output
+    agent_fallback = FinancialReasoningAgent(llm_provider=MockLLMProvider(should_fail=True))
+    res_fallback = agent_fallback.run(req, state)
+
     emoji_pattern = re.compile(
         "[\U00010000-\U0010ffff\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f5ff\U0001f600-\U0001f64f\U0001f680-\U0001f6ff]"
     )
-    assert not emoji_pattern.search(out)
+
+    for resp in [res_normal, res_fallback]:
+        assert not emoji_pattern.search(resp.recommendation.title)
+        assert not emoji_pattern.search(resp.recommendation.description)
+        assert not emoji_pattern.search(resp.reason)
+        for alt in resp.alternatives:
+            assert not emoji_pattern.search(alt)
+        for obj in resp.competing_objectives_considered:
+            assert not emoji_pattern.search(obj)
+
 
