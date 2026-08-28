@@ -62,10 +62,10 @@ source .venv_system/bin/activate && PYTHONPATH=. pytest backend/tests/ -v
 ```
 
 ### Step 9: Push and Open Pull Request Targeting dev
-Push the feature branch and create a PR targeting `dev` referencing the issue:
+Push the feature branch and create a PR targeting `dev` referencing the issue using the common template structure (`.github/pull_request_template.md`):
 ```bash
 git push -u origin HEAD
-gh pr create --base dev --title "feat(<scope>): implement issue #<ISSUE_NUMBER>" --body "Closes #<ISSUE_NUMBER>. Implements requested functionality following shared contracts."
+gh pr create --base dev --title "feat(<scope>): implement issue #<ISSUE_NUMBER>" --template .github/pull_request_template.md
 ```
 
 ### Step 10: Gracefully Handle Project V2
@@ -81,4 +81,15 @@ gh pr merge --squash --delete-branch || (git checkout dev && git merge --squash 
 ```bash
 gh issue close <ISSUE_NUMBER> --comment "Resolved and merged into dev."
 ```
+
+### Step 12: Create or Update Dev-to-Main Release Pull Request
+After clean merge into `dev`, ensure a PR exists to merge `dev` into `main` using the common template:
+```bash
+gh pr create --base main --head dev --title "chore(release): merge dev into main" --body "## Summary of Changes
+Syncs active sprint development from dev branch into release branch main.
+
+## Verification and Testing
+All automated test suites and contract validations passed." || true
+```
+
 
