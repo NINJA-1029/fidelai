@@ -58,3 +58,4 @@ frontend/flutter_app/build_outputs/
 .vscode/
 *.swp
 *.swo
+.artifacts/
