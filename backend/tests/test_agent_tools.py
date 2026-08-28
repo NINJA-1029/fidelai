@@ -258,3 +258,10 @@ def test_zero_emojis_in_reasoning_and_fallback():
             assert not emoji_pattern.search(obj)
 
 
+def test_zero_emojis_in_llm_provider_code():
+    provider = MockLLMProvider()
+    out = provider.generate("Test prompt")
+    emoji_pattern = re.compile(
+        "[\U00010000-\U0010ffff\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f5ff\U0001f600-\U0001f64f\U0001f680-\U0001f6ff]"
+    )
+    assert not emoji_pattern.search(out)
