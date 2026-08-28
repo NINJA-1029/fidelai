@@ -1,0 +1,83 @@
+{
+  "user_id": "user_demo_01",
+  "generated_at": "2026-08-28T10:30:05Z",
+  "current_balance": 30000.0,
+  "available_cash": 12000.0,
+  "expected_monthly_income": 65000.0,
+  "income_variability": 0.05,
+  "income_confidence": 0.95,
+  "fixed_expenses": 24000.0,
+  "variable_expenses": 12000.0,
+  "discretionary_expenses": 8500.0,
+  "recurring_obligations": 24000.0,
+  "upcoming_obligations": 18000.0,
+  "savings": 50000.0,
+  "emergency_fund_months": 2.1,
+  "savings_rate": 0.23,
+  "financial_goals": [
+    {
+      "goal_id": "goal_emergency_01",
+      "user_id": "user_demo_01",
+      "title": "Emergency Fund Reserve",
+      "target_amount": 72000.0,
+      "current_amount": 50000.0,
+      "currency": "INR",
+      "target_date": "2026-12-31T00:00:00Z",
+      "monthly_contribution_required": 5500.0,
+      "priority": 1,
+      "status": "on_track"
+    },
+    {
+      "goal_id": "goal_vacation_02",
+      "user_id": "user_demo_01",
+      "title": "Annual Family Vacation",
+      "target_amount": 40000.0,
+      "current_amount": 15000.0,
+      "currency": "INR",
+      "target_date": "2026-11-30T00:00:00Z",
+      "monthly_contribution_required": 8333.0,
+      "priority": 3,
+      "status": "at_risk"
+    }
+  ],
+  "investments_total_value": 140000.0,
+  "projected_balance": 19400.0,
+  "minimum_cash_buffer": 25000.0,
+  "risk_signals": [
+    {
+      "signal_id": "risk_liq_001",
+      "type": "liquidity",
+      "severity": "medium",
+      "title": "Projected Cash Deficit Against Buffer",
+      "description": "Projected month-end balance (INR 19,400) violates your minimum preferred reserve threshold (INR 25,000) by INR 5,600 due to the recent unexpected expense and upcoming obligations.",
+      "amount_impact": 5600.0,
+      "detected_at": "2026-08-28T10:30:05Z",
+      "is_active": true
+    }
+  ],
+  "opportunity_signals": [
+    {
+      "opportunity_id": "opp_disc_001",
+      "type": "expense_reduction",
+      "title": "Discretionary Spend Cushion",
+      "description": "Reducing remaining discretionary spend by INR 4,000 this month will restore projected liquidity to INR 23,400.",
+      "potential_benefit_amount": 4000.0,
+      "detected_at": "2026-08-28T10:30:05Z"
+    }
+  ],
+  "user_preferences": {
+    "user_id": "user_demo_01",
+    "risk_tolerance": "moderate",
+    "minimum_cash_buffer": 25000.0,
+    "target_emergency_fund_months": 3.0,
+    "monthly_savings_target": 15000.0,
+    "financial_priorities": [
+      "liquidity_preservation",
+      "emergency_fund",
+      "debt_reduction",
+      "investments"
+    ]
+  },
+  "data_completeness": 0.92,
+  "overall_confidence": 0.94
+}

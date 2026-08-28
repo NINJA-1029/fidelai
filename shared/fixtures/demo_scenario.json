@@ -1,0 +1,56 @@
+{
+  "scenario_name": "Emergency Medical Expense Liquidity Shock",
+  "description": "Primary end-to-end demo scenario showing deterministic risk detection and LLM explainable decision guidance",
+  "initial_conditions": {
+    "user_id": "user_demo_01",
+    "starting_balance": 42000.0,
+    "expected_monthly_income": 65000.0,
+    "fixed_expenses": 24000.0,
+    "variable_expenses": 12000.0,
+    "discretionary_expenses": 8500.0,
+    "upcoming_obligations": 18000.0,
+    "minimum_preferred_cash_buffer": 25000.0,
+    "emergency_fund_months": 2.1,
+    "investment_portfolio": 140000.0,
+    "risk_tolerance": "moderate"
+  },
+  "injected_event": {
+    "event_type": "transaction_created",
+    "channel": "sms",
+    "raw_sms": "INR 12,000.00 debited from A/C XX4102 on 28-Aug-2026 at Care Diagnostics. Avl Bal: INR 30,000.00",
+    "amount": 12000.0,
+    "category": "unexpected",
+    "description": "Urgent Medical Treatment & Diagnostics"
+  },
+  "deterministic_state_transitions": {
+    "post_event_balance": 30000.0,
+    "available_cash_after_bills": 12000.0,
+    "projected_month_end_balance": 19400.0,
+    "buffer_deficit": 5600.0,
+    "detected_risk_type": "liquidity",
+    "detected_risk_severity": "medium"
+  },
+  "agentic_reasoning_outputs": {
+    "primary_recommendation": "Preserve near-term liquidity by deferring non-essential goal contributions and trimming discretionary spend",
+    "evidence_metrics": [
+      {
+        "metric": "projected_balance",
+        "value": 19400.0,
+        "threshold": 25000.0
+      },
+      {
+        "metric": "upcoming_obligations",
+        "value": 18000.0
+      },
+      {
+        "metric": "current_balance",
+        "value": 30000.0
+      }
+    ],
+    "competing_objectives_resolved": [
+      "Protected INR 140,000 investment portfolio from premature liquidation",
+      "Prioritized liquidity over vacation savings goal for current cycle"
+    ],
+    "confidence_score": 0.94
+  }
+}

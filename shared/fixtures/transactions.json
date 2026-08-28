@@ -1,0 +1,72 @@
+[
+  {
+    "transaction_id": "tx_demo_001",
+    "user_id": "user_demo_01",
+    "account_id": "acc_checking_01",
+    "amount": 65000.0,
+    "currency": "INR",
+    "type": "credit",
+    "category": "income",
+    "description": "Monthly Salary - Tech Corp",
+    "timestamp": "2026-08-01T09:00:00Z",
+    "source": "bank_api",
+    "confidence": 1.0,
+    "is_recurring": true
+  },
+  {
+    "transaction_id": "tx_demo_002",
+    "user_id": "user_demo_01",
+    "account_id": "acc_checking_01",
+    "amount": 22000.0,
+    "currency": "INR",
+    "type": "debit",
+    "category": "housing",
+    "description": "Apartment Monthly Rent",
+    "timestamp": "2026-08-03T10:15:00Z",
+    "source": "bank_api",
+    "confidence": 1.0,
+    "is_recurring": true
+  },
+  {
+    "transaction_id": "tx_demo_003",
+    "user_id": "user_demo_01",
+    "account_id": "acc_checking_01",
+    "amount": 2000.0,
+    "currency": "INR",
+    "type": "debit",
+    "category": "utilities",
+    "description": "Electricity & Water Bill",
+    "timestamp": "2026-08-05T14:30:00Z",
+    "source": "bank_api",
+    "confidence": 1.0,
+    "is_recurring": true
+  },
+  {
+    "transaction_id": "tx_demo_004",
+    "user_id": "user_demo_01",
+    "account_id": "acc_checking_01",
+    "amount": 9000.0,
+    "currency": "INR",
+    "type": "debit",
+    "category": "groceries",
+    "description": "Supermarket Weekly Provisions",
+    "timestamp": "2026-08-10T18:45:00Z",
+    "source": "receipt",
+    "confidence": 0.95,
+    "is_recurring": false
+  },
+  {
+    "transaction_id": "tx_demo_005",
+    "user_id": "user_demo_01",
+    "account_id": "acc_checking_01",
+    "amount": 12000.0,
+    "currency": "INR",
+    "type": "debit",
+    "category": "unexpected",
+    "description": "Urgent Medical Treatment & Diagnostics",
+    "timestamp": "2026-08-28T10:30:00Z",
+    "source": "sms",
+    "confidence": 0.98,
+    "is_recurring": false
+  }
+]

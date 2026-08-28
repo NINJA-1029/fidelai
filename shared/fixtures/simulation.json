@@ -1,0 +1,26 @@
+{
+  "request": {
+    "user_id": "user_demo_01",
+    "scenario_type": "unexpected_expense",
+    "amount": 12000.0,
+    "effective_date": "2026-08-28",
+    "description": "Simulate urgent medical emergency expense"
+  },
+  "result": {
+    "user_id": "user_demo_01",
+    "scenario_type": "unexpected_expense",
+    "baseline_projected_balance": 31400.0,
+    "simulated_projected_balance": 19400.0,
+    "buffer_violation_risk": true,
+    "impact_summary": "An immediate outflow of INR 12,000 reduces 30-day projected liquidity from INR 31,400 to INR 19,400, falling below your INR 25,000 safety threshold by INR 5,600.",
+    "goal_impacts": [
+      {
+        "goal_id": "goal_vacation_02",
+        "title": "Annual Family Vacation",
+        "delay_months": 1,
+        "impact": "Requires pausing contribution for 30 days to protect cash reserves"
+      }
+    ],
+    "recommendation": "Maintain emergency buffer by deferring discretionary allocations and non-essential savings goals."
+  }
+}

@@ -1,0 +1,170 @@
+# AGENTS.md - Agentic AI Financial Management System Operational Protocol
+
+## 1. System Mission and Operating Mandate
+
+This repository houses an Agentic AI Financial Management System engineered to ingest heterogeneous financial data, compute a deterministic financial state, detect proactive risks and opportunities, and deliver explainable decision support via an LLM reasoning engine backed by Qwen GGUF running natively on llama.cpp.
+
+This project is executed under a strict 24-hour development sprint with four dedicated developers working in parallel. The goal is to establish the smallest technically sound, end-to-end operational system without unnecessary infrastructure complexity.
+
+### Primary Data Flow (The Golden Path)
+
+Heterogeneous Financial Input
+    |
+    v
+Input Normalization
+    |
+    v
+Financial Event
+    |
+    v
+Financial State Update
+    |
+    v
+Deterministic Financial Analytics
+    |
+    +-------------------+-------------------+
+    |                                       |
+    v                                       v
+Risk Detection                         Opportunity Detection
+    |                                       |
+    +-------------------+-------------------+
+                        |
+                        v
+                 LangGraph Workflow
+                        |
+           +------------+------------+
+           |                         |
+           v                         v
+Deterministic Tools             Qwen Reasoning (llama.cpp)
+           |                         |
+           +------------+------------+
+                        |
+                        v
+          Explainable Recommendation & Evidence
+                        |
+                        v
+                  FastAPI Layer
+                        |
+                        v
+              Flutter Mobile Application
+
+---
+
+## 2. Absolute Prohibitions
+
+### Absolute Emoji Prohibition
+There is an absolute prohibition on emojis across this entire repository.
+- No emojis in source code.
+- No emojis in docstrings or comments.
+- No emojis in documentation or markdown files.
+- No emojis in Git commit messages or branch names.
+- No emojis in GitHub issue templates or issue descriptions.
+- No emojis in log output, stdout, or stderr.
+- No emojis in test fixtures or mock payloads.
+- No emojis in UI components, labels, or error messages.
+Use standard monochrome iconography (Lucide SVG or Flutter icon equivalents) for visual indicators.
+
+### Absolute Container and Orchestration Prohibition
+- Do not use Docker.
+- Do not use Kubernetes.
+- Do not create Dockerfiles, docker-compose files, Helm charts, ECS/EKS manifests, or container registries.
+- All services execute natively on host OS environments (macOS/Linux locally, EC2 Ubuntu instances on AWS).
+
+### Absolute Prohibition on LLM Arithmetic
+- The LLM is never the calculator or source of truth for financial math.
+- All calculations (cash flow, liquidity, goal pacing, risk scores, forecasts) are calculated deterministically by the Financial Engine.
+- The LLM reasons over structured facts and evidence provided by deterministic tools.
+
+---
+
+## 3. Developer Ownership and Directory Boundaries
+
+There are four designated development roles. These codenames are strictly internal and must never be displayed in the user-facing UI.
+
+### Dev 1: High Warden (Flutter + UI)
+- Primary Ownership: frontend/
+- Responsibilities: Flutter application, Riverpod state management, GoRouter navigation, monochrome design system (0px container radius, 75px full pill buttons/badges), Lucide icons, dashboard, transactions screen, financial health screen, goals screen, investments screen, AI advisor screen, API client integration.
+- Boundary: Must consume shared contracts. Must not implement financial math or duplicate backend engine logic.
+
+### Dev 2: The Scribe (AI / Agentic Workflow)
+- Primary Ownership: backend/agent/
+- Responsibilities: LangGraph state machine, LLMProvider abstraction, llama.cpp GGUF client integration, deterministic tool execution, evidence compilation, recommendation synthesis, uncertainty reasoning, proactive risk analysis, structured AgentResponse validation.
+- Boundary: Must not perform financial arithmetic; must call deterministic tools.
+
+### Dev 3: The Alchemist (Financial Engine + Datasets)
+- Primary Ownership: backend/financial_engine/, backend/ingestion/, shared/fixtures/
+- Responsibilities: Ingestion normalizers (SMS, receipts, CSV, bank feeds), FinancialEvent generation, FinancialState calculator, cash-flow analysis, forecasting engine, risk/opportunity detection, goal progress math, uncertainty scoring, demo dataset scenarios.
+- Boundary: Owns the mathematical and statistical source of truth.
+
+### Dev 4: King's Hand (Backend + Cloud + Integration)
+- Primary Ownership: backend/api/, backend/models/, backend/repositories/, backend/services/, deployment/
+- Responsibilities: FastAPI application, Pydantic schemas, PostgreSQL/Supabase database models, repository layer, endpoint orchestration, end-to-end integration, native AWS EC2 deployment automation, CI/CD, final merge authority.
+- Boundary: Ensures architectural integrity and unblocks parallel tracks.
+
+---
+
+## 4. Contract-First and Mock-First Development
+
+Parallel development relies on explicit, immutable shared contracts and fixtures.
+
+1. All data exchanged between modules must conform to schemas in `shared/contracts/contracts.py` and `shared/schemas/`.
+2. Mock fixtures in `shared/fixtures/` serve as independent testbeds for all developers:
+   - `transactions.json`: Raw transaction payloads.
+   - `financial_events.json`: Normalized financial events.
+   - `financial_state.json`: Complete canonical financial state.
+   - `agent_request.json`: Payload passed to LangGraph agent.
+   - `agent_response.json`: Structured recommendation output.
+   - `dashboard.json`: Aggregated dashboard response.
+   - `simulation.json`: What-if scenario request and response.
+3. No developer may block on another developer's implementation. Build against fixtures, then connect live endpoints during integration milestones.
+
+---
+
+## 5. UI Design System Principles
+
+- Monochrome-First: Neutral dark/light slate tones. Semantic accents (red/amber/green) used strictly for status indicators and risk levels.
+- Zero Radius Rule: Containers, text inputs, cards, tables, modal dialogs use 0px border radius (sharp geometric aesthetics).
+- Pill Rule: Interactive buttons and category/status badges use 75px full pill border radius.
+- Typography: Clean sans-serif (Inter, Roboto, or system sans).
+- Iconography: Lucide SVG icons or standard Flutter vector icons. No emoji graphics.
+- Information Density: High financial density, clean tables, clear metrics, deterministic charts using fl_chart.
+
+---
+
+## 6. Uncertainty and Data Quality Model
+
+All ingested financial metrics and state variables must support explicit uncertainty:
+- `confirmed`: Fully verified by authoritative institution or settled ledger.
+- `estimated`: Derived via deterministic extrapolation or verified pattern.
+- `uncertain`: Extracted with low confidence or variable income stream.
+- `unknown`: Missing information; system must explicitly acknowledge lack of data rather than fabricating values.
+
+---
+
+## 7. Git and Contribution Workflow
+
+### Branch Naming Convention
+- Feature branches: `feature/issue-<NUMBER>-<short-slug>`
+- Bug fix branches: `fix/issue-<NUMBER>-<short-slug>`
+
+### Commit Message Standards
+- Must be atomic, descriptive, and reference the associated issue.
+- Format: `feat(scope): concise description (issue #<NUMBER>)` or `fix(scope): concise description (issue #<NUMBER>)`
+- Strictly zero emojis in commit messages.
+
+### Pull Request Rules
+- PR title must include issue reference.
+- PR must pass all unit and contract tests before review.
+- King's Hand has final review and merge authority for cross-cutting changes.
+
+---
+
+## 8. 24-Hour Timeline and Milestones
+
+- Hour 0-1: Architecture, contracts, repository scaffolding, issue assignment.
+- Hour 1-6: Parallel module development against fixtures (Flutter UI, Agent LangGraph, Financial Engine, FastAPI).
+- Hour 6-10: First Vertical Slice Integration (Transaction -> Event -> State -> Risk -> Agent -> FastAPI -> Flutter).
+- Hour 10-14: Advanced intelligence (proactive triggers, balance forecasting, goal optimization, uncertainty scoring).
+- Hour 14-18: What-if simulation engine, AWS EC2 native deployment, remote API integration.
+- Hour 18-21: Feature Freeze; end-to-end stabilization, edge-case hardening, unit/integration test coverage.
+- Hour 21-24: Final demonstration polish, fallback fixture validation, presentation delivery.

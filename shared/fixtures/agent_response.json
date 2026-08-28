@@ -1,0 +1,54 @@
+{
+  "response_id": "resp_demo_001",
+  "user_id": "user_demo_01",
+  "recommendation": {
+    "recommendation_id": "rec_demo_001",
+    "title": "Preserve Near-Term Liquidity",
+    "priority": "high",
+    "description": "An unexpected expense of INR 12,000 has reduced your projected month-end balance to INR 19,400, falling INR 5,600 below your preferred cash buffer of INR 25,000. With an upcoming obligation of INR 18,000 due, we recommend pausing discretionary spending and deferring non-essential goal contributions.",
+    "impact_amount": 5600.0,
+    "category": "liquidity"
+  },
+  "reason": "An unexpected medical transaction of INR 12,000 combined with an upcoming obligation of INR 18,000 will compress liquid reserves below your configured INR 25,000 minimum safety threshold.",
+  "evidence": [
+    {
+      "metric": "current_balance",
+      "value": 30000.0,
+      "threshold": 42000.0,
+      "status": "confirmed",
+      "description": "Liquid bank balance after recent debit"
+    },
+    {
+      "metric": "projected_balance",
+      "value": 19400.0,
+      "threshold": 25000.0,
+      "status": "estimated",
+      "description": "Deterministic 30-day forecast considering fixed costs and bills"
+    },
+    {
+      "metric": "minimum_cash_buffer",
+      "value": 25000.0,
+      "threshold": null,
+      "status": "confirmed",
+      "description": "User preference target safety buffer"
+    },
+    {
+      "metric": "upcoming_obligations",
+      "value": 18000.0,
+      "threshold": null,
+      "status": "confirmed",
+      "description": "Committed pending bills due in current cycle"
+    }
+  ],
+  "confidence": 0.94,
+  "alternatives": [
+    "Temporarily pause the INR 8,333 vacation goal contribution for this billing cycle.",
+    "Reduce remaining discretionary dining and shopping allocations by INR 4,000.",
+    "Utilize short-term liquid savings to protect primary checking buffer without touching long-term investments."
+  ],
+  "competing_objectives_considered": [
+    "Liquidity preservation (Priority 1) vs. Secondary Vacation Goal pacing (Priority 3).",
+    "Preserving long-term investment compounding (INR 140,000 portfolio intact) rather than liquidating equity assets for temporary cash shortfall."
+  ],
+  "generated_at": "2026-08-28T10:30:10Z"
+}

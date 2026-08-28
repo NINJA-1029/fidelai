@@ -1,0 +1,207 @@
+{
+  "user_id": "user_demo_01",
+  "financial_state": {
+    "user_id": "user_demo_01",
+    "generated_at": "2026-08-28T10:30:05Z",
+    "current_balance": 30000.0,
+    "available_cash": 12000.0,
+    "expected_monthly_income": 65000.0,
+    "income_variability": 0.05,
+    "income_confidence": 0.95,
+    "fixed_expenses": 24000.0,
+    "variable_expenses": 12000.0,
+    "discretionary_expenses": 8500.0,
+    "recurring_obligations": 24000.0,
+    "upcoming_obligations": 18000.0,
+    "savings": 50000.0,
+    "emergency_fund_months": 2.1,
+    "savings_rate": 0.23,
+    "financial_goals": [
+      {
+        "goal_id": "goal_emergency_01",
+        "user_id": "user_demo_01",
+        "title": "Emergency Fund Reserve",
+        "target_amount": 72000.0,
+        "current_amount": 50000.0,
+        "currency": "INR",
+        "target_date": "2026-12-31T00:00:00Z",
+        "monthly_contribution_required": 5500.0,
+        "priority": 1,
+        "status": "on_track"
+      },
+      {
+        "goal_id": "goal_vacation_02",
+        "user_id": "user_demo_01",
+        "title": "Annual Family Vacation",
+        "target_amount": 40000.0,
+        "current_amount": 15000.0,
+        "currency": "INR",
+        "target_date": "2026-11-30T00:00:00Z",
+        "monthly_contribution_required": 8333.0,
+        "priority": 3,
+        "status": "at_risk"
+      }
+    ],
+    "investments_total_value": 140000.0,
+    "projected_balance": 19400.0,
+    "minimum_cash_buffer": 25000.0,
+    "risk_signals": [
+      {
+        "signal_id": "risk_liq_001",
+        "type": "liquidity",
+        "severity": "medium",
+        "title": "Projected Cash Deficit Against Buffer",
+        "description": "Projected month-end balance (INR 19,400) violates your minimum preferred reserve threshold (INR 25,000) by INR 5,600.",
+        "amount_impact": 5600.0,
+        "detected_at": "2026-08-28T10:30:05Z",
+        "is_active": true
+      }
+    ],
+    "opportunity_signals": [
+      {
+        "opportunity_id": "opp_disc_001",
+        "type": "expense_reduction",
+        "title": "Discretionary Spend Cushion",
+        "description": "Reducing remaining discretionary spend by INR 4,000 this month will restore projected liquidity to INR 23,400.",
+        "potential_benefit_amount": 4000.0,
+        "detected_at": "2026-08-28T10:30:05Z"
+      }
+    ],
+    "user_preferences": {
+      "user_id": "user_demo_01",
+      "risk_tolerance": "moderate",
+      "minimum_cash_buffer": 25000.0,
+      "target_emergency_fund_months": 3.0,
+      "monthly_savings_target": 15000.0,
+      "financial_priorities": [
+        "liquidity_preservation",
+        "emergency_fund",
+        "debt_reduction",
+        "investments"
+      ]
+    },
+    "data_completeness": 0.92,
+    "overall_confidence": 0.94
+  },
+  "latest_recommendation": {
+    "response_id": "resp_demo_001",
+    "user_id": "user_demo_01",
+    "recommendation": {
+      "recommendation_id": "rec_demo_001",
+      "title": "Preserve Near-Term Liquidity",
+      "priority": "high",
+      "description": "An unexpected expense of INR 12,000 has reduced your projected month-end balance to INR 19,400, falling INR 5,600 below your preferred cash buffer of INR 25,000.",
+      "impact_amount": 5600.0,
+      "category": "liquidity"
+    },
+    "reason": "An unexpected medical transaction of INR 12,000 combined with an upcoming obligation of INR 18,000 will compress liquid reserves below your configured INR 25,000 minimum safety threshold.",
+    "evidence": [
+      {
+        "metric": "current_balance",
+        "value": 30000.0,
+        "threshold": 42000.0,
+        "status": "confirmed",
+        "description": "Liquid bank balance after recent debit"
+      },
+      {
+        "metric": "projected_balance",
+        "value": 19400.0,
+        "threshold": 25000.0,
+        "status": "estimated",
+        "description": "Deterministic 30-day forecast"
+      }
+    ],
+    "confidence": 0.94,
+    "alternatives": [
+      "Temporarily pause the vacation goal contribution.",
+      "Trim discretionary dining by INR 4,000."
+    ],
+    "competing_objectives_considered": [
+      "Liquidity preservation vs. vacation goal pacing."
+    ],
+    "generated_at": "2026-08-28T10:30:10Z"
+  },
+  "recent_transactions": [
+    {
+      "transaction_id": "tx_demo_005",
+      "user_id": "user_demo_01",
+      "account_id": "acc_checking_01",
+      "amount": 12000.0,
+      "currency": "INR",
+      "type": "debit",
+      "category": "unexpected",
+      "description": "Urgent Medical Treatment & Diagnostics",
+      "timestamp": "2026-08-28T10:30:00Z",
+      "source": "sms",
+      "confidence": 0.98,
+      "is_recurring": false
+    },
+    {
+      "transaction_id": "tx_demo_004",
+      "user_id": "user_demo_01",
+      "account_id": "acc_checking_01",
+      "amount": 9000.0,
+      "currency": "INR",
+      "type": "debit",
+      "category": "groceries",
+      "description": "Supermarket Weekly Provisions",
+      "timestamp": "2026-08-10T18:45:00Z",
+      "source": "receipt",
+      "confidence": 0.95,
+      "is_recurring": false
+    }
+  ],
+  "active_risks": [
+    {
+      "signal_id": "risk_liq_001",
+      "type": "liquidity",
+      "severity": "medium",
+      "title": "Projected Cash Deficit Against Buffer",
+      "description": "Projected month-end balance (INR 19,400) violates your minimum preferred reserve threshold (INR 25,000) by INR 5,600.",
+      "amount_impact": 5600.0,
+      "detected_at": "2026-08-28T10:30:05Z",
+      "is_active": true
+    }
+  ],
+  "active_opportunities": [
+    {
+      "opportunity_id": "opp_disc_001",
+      "type": "expense_reduction",
+      "title": "Discretionary Spend Cushion",
+      "description": "Reducing remaining discretionary spend by INR 4,000 this month will restore projected liquidity to INR 23,400.",
+      "potential_benefit_amount": 4000.0,
+      "detected_at": "2026-08-28T10:30:05Z"
+    }
+  ],
+  "forecast_30_days": {
+    "user_id": "user_demo_01",
+    "horizon_days": 30,
+    "projected_end_balance": 19400.0,
+    "minimum_projected_balance": 12000.0,
+    "lowest_balance_date": "2026-09-04",
+    "projection_points": [
+      {
+        "date": "2026-08-28",
+        "projected_balance": 30000.0,
+        "lower_bound": 29000.0,
+        "upper_bound": 31000.0,
+        "is_below_buffer": false
+      },
+      {
+        "date": "2026-09-04",
+        "projected_balance": 12000.0,
+        "lower_bound": 10500.0,
+        "upper_bound": 13500.0,
+        "is_below_buffer": true
+      },
+      {
+        "date": "2026-09-15",
+        "projected_balance": 19400.0,
+        "lower_bound": 17000.0,
+        "upper_bound": 21800.0,
+        "is_below_buffer": true
+      }
+    ],
+    "confidence": 0.88
+  }
+}
